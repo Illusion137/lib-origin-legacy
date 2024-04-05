@@ -30,8 +30,12 @@ export namespace Musi {
         video_duration: number,
     }
     
+    export const valid_playlist_regex = /(https?:\/\/)feelthemusi\.com\/playlist\/.+/i
+
     export async function getPlaylist(url: string): Promise<PlaylistResponse>{
         try {            
+            if(valid_playlist_regex.test(url) === false) throw "Not a known Musi Playlist URL"; 
+
             const playlist_param = url.replace('https://feelthemusi.com/playlist/', '')
             const response = await fetch(`https://feelthemusi.com/api/v4/playlists/fetch/${playlist_param}`);
             
