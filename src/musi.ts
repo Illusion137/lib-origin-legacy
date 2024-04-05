@@ -1,3 +1,5 @@
+import { ResponseError } from "./utils/types";
+
 export namespace Musi {
     type SuccessData = { title: string, data: Track[] };
 
@@ -19,11 +21,7 @@ export namespace Musi {
         }
     }
 
-    interface PlaylistResponseError {
-        error: string
-    }
-
-    type PlaylistResponse = PlaylistResponseSuccessParsed | PlaylistResponseError;
+    type PlaylistResponse = PlaylistResponseSuccessParsed | ResponseError;
     
     interface Track {
         video_id: string,

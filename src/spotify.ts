@@ -1,7 +1,7 @@
 import axios from "axios";
+import { ResponseError } from "./utils/types";
 
 export namespace Spotify {
-    type ResponseError = { error: string };
     interface ClientSession {
         accessToken: string,
         clientId: string
@@ -82,9 +82,7 @@ export namespace Spotify {
                 headers, "body": "{\"client_data\":{\"client_version\":\"1.2.21.625.gab84de47\",\"client_id\":\"" + session.clientId + "\",\"js_sdk_data\":{\"device_brand\":\"unknown\",\"device_model\":\"unknown\",\"os\":\"windows\",\"os_version\":\"NT 10.0\",\"device_id\":\"null\",\"device_type\":\"computer\"}}}",
             }) ).data;
             return { 'session': session, 'client_token': client_token as ClientToken };
-        } catch (error) {
-            return { "error": String(error) } as ResponseError;
-        }
+        } catch (error) { return { "error": String(error) }; }
     }
 
     export async function getPlaylist(url: string, cookies: (string | undefined) = undefined, limit: number = 100): Promise<Playlist | ResponseError> {
@@ -128,9 +126,7 @@ export namespace Spotify {
             else throw `url includes an unknown playlist type`;
             
             return playlist_data;
-        } catch (error) {
-            return { 'error': String(error) };
-        }
+        } catch (error) { return { 'error': String(error) }; }
     
     }
 
@@ -168,9 +164,7 @@ export namespace Spotify {
                 } catch (error) { }
             }
             return mapped_data;
-        } catch (error) {
-            return { "error": String(error) };
-        }
+        } catch (error) { return { "error": String(error) }; }
     }
 
 }

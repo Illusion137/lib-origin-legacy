@@ -1,8 +1,7 @@
 import axios from "axios";
+import { ResponseError } from "./utils/types";
 
-export namespace AmazonMusic {
-    type ResponseError = { error: string };
-    
+export namespace AmazonMusic {    
     export async function getAmznMusicData(url: string, cookies: string | undefined = undefined): Promise<ResponseError>{
         try {
             const headers = {
@@ -36,9 +35,7 @@ export namespace AmazonMusic {
                 amznMusic = JSON.parse(amznMusicText);
             }
             return amznMusic;
-        } catch (error) {
-            return { "error": String(error) };
-        }
+        } catch (error) { return { "error": String(error) }; }
     }
     
     export async function getAmazonMusicShowHomeData(amznMusic: any, url: string){
