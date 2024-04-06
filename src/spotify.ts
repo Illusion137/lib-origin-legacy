@@ -51,10 +51,10 @@ export namespace Spotify {
 
     export const valid_playlist_regex = /(https?:\/\/)open\.spotify\.com\/(playlist|album|collection)\/.+/i
 
-    export function getHeaders({client: Client = undefined, cookie_jar: CookieJar = undefined}){
+    export function getHeaders(client: (Client|undefined) = undefined, cookie_jar: (CookieJar|undefined) = undefined){
         return {
-            "accept": "application/json",
-            "accept-language": "en",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept-language": "en-US,en",
             "app-platform": "WebPlayer",
             "authorization": `Bearer ${client?.session.accessToken}`,
             "client-token": client?.client_token.granted_token.token,
@@ -68,32 +68,17 @@ export namespace Spotify {
             "spotify-app-version": "1.2.21.625.gab84de47",
             "Referer": "https://open.spotify.com/",
             "Referrer-Policy": "strict-origin-when-cross-origin",
+            "cache-control": "max-age=0",
             'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1',
             "Cookies": cookie_jar?.toString(),
-
-            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "accept-language": "en-US,en;q=0.9",
-            "cache-control": "max-age=0",
-            "sec-ch-ua": "\"Google Chrome\";v=\"117\", \"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"117\"",
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": "\"Windows\"",
-            "sec-fetch-dest": "document",
-            "sec-fetch-mode": "navigate",
-            "sec-fetch-site": "none",
-            "sec-fetch-user": "?1",
             "upgrade-insecure-requests": "1",
             'Access-Control-Allow-Origin' : '*',
-            "content-type": "application/json",
-            "Referer": "https://open.spotify.com/",
-            "Referrer-Policy": "strict-origin-when-cross-origin",
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1',
-            "Cookies": cookie_jar?.toString(),
         }
     }
 
     export async function getClient(url: string, cookie_jar: (CookieJar | undefined) = undefined) : Promise< Client|ResponseError >{
         try {
-            const headers = getHeaders({});
+            const headers = getHeaders();
             const body = (await axios({'method': 'GET', 'url': url, 'headers': headers})).data
     
             const session_regex = /<script id="session" data-testid="session" type="application\/json">(.+?)<\/script>/is
@@ -117,7 +102,7 @@ export namespace Spotify {
             const client = await getClient(url, cookie_jar);
             
             if("error" in client) throw client.error;
-            const headers = getHeaders({client: client, cookie_jar: cookie_jar});
+            const headers = getHeaders(client, cookie_jar);
 
             let playlist_data: Playlist;
     
@@ -129,7 +114,7 @@ export namespace Spotify {
                     {  headers }) ).data as UserPlaylist;
             }
             else if(url.includes('/collection/')){
-                if(cookies === undefined) throw "Undefined Cookies for Spotify Collection";
+                if(cookie_jar === undefined) throw "Undefined Cookies for Spotify Collection";
                 playlist_data = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?operationName=fetchLibraryTracks&variables=%7B%22offset%22%3A0%2C%22limit%22%3A${limit}%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%228474ec383b530ce3e54611fca2d8e3da57ef5612877838b8dbf00bd9fc692dfb%22%7D%7D`,
                     { headers }) ).data as Collection;
             }
@@ -144,7 +129,7 @@ export namespace Spotify {
         try {
             const client = await getClient("https://open.spotify.com/", cookie_jar);
             if("error" in client) throw client.error;
-            const headers = getHeaders({client: client, cookie_jar: cookie_jar});
+            const headers = getHeaders(client, cookie_jar);
 
             const library: Library = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?operationName=libraryV3&variables=%7B%22filters%22%3A%5B%22Playlists%22%5D%2C%22order%22%3Anull%2C%22textFilter%22%3A%22%22%2C%22features%22%3A%5B%22LIKED_SONGS%22%2C%22YOUR_EPISODES%22%5D%2C%22limit%22%3A${limit}%2C%22offset%22%3A0%2C%22flatten%22%3Afalse%2C%22expandedFolders%22%3A%5B%5D%2C%22folderUri%22%3Anull%2C%22includeFoldersWhenFlattening%22%3Atrue%2C%22withCuration%22%3Afalse%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%2217d801ba80f3a3d7405966641818c334fe32158f97e9e8b38f1a92f764345df9%22%7D%7D`, 
                 { headers}) ).data;

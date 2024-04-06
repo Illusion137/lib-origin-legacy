@@ -1,1 +1,1 @@
-console.log("test");
+import * as Origin from './index';

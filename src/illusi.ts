@@ -1,4 +1,4 @@
-namespace Illusi {
+export namespace Illusi {
     export interface Track {
         
     }
