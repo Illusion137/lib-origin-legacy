@@ -39,8 +39,9 @@ export namespace Musi {
             const playlist_param = url.replace('https://feelthemusi.com/playlist/', '')
             const response = await fetch(`https://feelthemusi.com/api/v4/playlists/fetch/${playlist_param}`);
             
-            const playlist_response = await response.json() as PlaylistResponseSuccess | PlaylistResponseError;
+            const playlist_response = await response.json() as PlaylistResponseSuccess | ResponseError;
             if("error" in playlist_response) throw playlist_response.error;
+            
             const playlist_response_parsed_data: PlaylistResponseSuccessParsed = {
                 'success': {
                     'code': playlist_response.success.code,

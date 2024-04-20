@@ -1,10 +1,7 @@
-type ExpiredCookie = { "error": "expired" };
+import { AxiosResponse } from "axios";
 
-enum SameSiteEnum {
-    "None",
-    "Lax",
-    "Strict"
-}
+type ExpiredCookie = { "error": "expired" };
+type SameSite = "None" | "Lax" | "Strict" | undefined;
 
 interface CookieData {
     name: string,
@@ -13,7 +10,7 @@ interface CookieData {
     path?: string,
     expires?: Date,
     max_age?: number,
-    same_site?: SameSiteEnum,
+    same_site?: SameSite,
     http_only?: boolean,
     secure?: boolean,
 }
@@ -37,7 +34,10 @@ export class Cookie {
     constructor(c: CookieData){
         this.#data = c;
     }
-    hasExpired(): boolean { new Date().getTime() > this.this.#data.expires; }
+    hasExpired(): boolean { 
+        if(this.#data.expires !== undefined) return new Date().getTime() > this.#data.expires?.getTime();
+        else return false;
+    }
     toString(): string { return `${this.#data.name}=${this.#data.value}`; }
     getData(): CookieData { return this.#data; }
     static fromString(cstring: string): Cookie {
@@ -64,7 +64,7 @@ export class Cookie {
             path: path,
             expires: expires,
             max_age: max_age,
-            same_site: same_site,
+            same_site: same_site as SameSite,
             http_only: http_only,
             secure: secure,
         });
@@ -74,26 +74,31 @@ export class Cookie {
 export class CookieJar{
     #jar: Cookie[]
     constructor(j: Cookie[]){
-        this.jar = j;
+        this.#jar = j;
     }
+    hasCookie(other_cookie: Cookie): boolean { return this.getCookies().findIndex(cookie => cookie.getData().name === other_cookie.getData().name) !== -1; }
     getCookies(): Cookie[] { 
         const non_expired_cookies = this.#jar.filter(cookie => !cookie.hasExpired());
-        jar = non_expired_cookies;
+        this.#jar = non_expired_cookies;
         return this.#jar;
     }
-    toString(): string { return this.getCookies().map(cookie => cookie.toString()); }
+    toString(): string { return this.getCookies().map(cookie => cookie.toString()).join("; "); }
     merge(other_jar: CookieJar): void {
         const cookie_names = this.getCookies().map(cookie => cookie.getData().name); 
         for(const other_cookie of other_jar.getCookies()){
             if(cookie_names.includes(other_cookie.getData().name) && !other_cookie.hasExpired()){
-                const jar_cookie_index = this.#jar.findIndex(cookie => cookie.getData.name = other_cookie.getData().name);
-                jar[jar_cookie_index] = other_cookie;
+                const jar_cookie_index = this.#jar.findIndex(cookie => cookie.getData().name = other_cookie.getData().name);
+                this.#jar[jar_cookie_index] = other_cookie;
             }
             else this.#jar.push(other_cookie);
         }
     }
-    static fromString(jstring: string): CookieJar {
-        const cstrings: string[] = jstring.split("; ");
+    updateWithAxios(response: AxiosResponse){
+        const set_cookies = response.headers['set-cookie'];
+        if(set_cookies === undefined) return;
+        this.merge(CookieJar.fromString(set_cookies));
+    }
+    static fromString(cstrings: string[]): CookieJar {
         const jar: Cookie[] = cstrings.map(cstring => Cookie.fromString(cstring));
         return new CookieJar(jar.filter(cookie => !cookie.hasExpired()));
     }

@@ -1,138 +1,50 @@
 import * as sha1 from 'sha1-uint8array'
+import { CookieJar } from './utils/cookie_util';
 
 export namespace YouTube {
+    type YouTubeType = "DESKTOP" | "MOBILE";
+
     export function getPlaylistIdFromURL(url: string){
         const idRegex = /(https?:\/\/)?(www\.)?youtube\.com\/playlist\?list=/;
         return url.replace(idRegex, '');
     }
-    export async function getYouTubeInitialData(url = 'https://www.youtube.com/'){
-        try {
-            const innertubeApiKeyRegex = /"INNERTUBE_API_KEY": ?\"(.+?)\"/s;
-            const innertubeContextRegex = /INNERTUBE_CONTEXT": ?({.+?}})/s;
-            let config = {
-                method: 'get',
-                maxBodyLength: Infinity,
-                url: url,
-                headers: { 
-                  'authority': 'www.youtube.com', 
-                  'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7', 
-                  'accept-language': 'en-US,en;q=0.9', 
-                  'cache-control': 'max-age=0', 
-                  'Cookies': Prefs.prefs.external_services.youtube_cookies,  
-                  'sec-ch-ua': '"Google Chrome";v="117", "Not;A=Brand";v="8", "Chromium";v="117"', 
-                  'sec-ch-ua-arch': '"x86"', 
-                  'sec-ch-ua-bitness': '"64"', 
-                  'sec-ch-ua-full-version': '"117.0.5938.92"', 
-                  'sec-ch-ua-full-version-list': '"Google Chrome";v="117.0.5938.92", "Not;A=Brand";v="8.0.0.0", "Chromium";v="117.0.5938.92"', 
-                  'sec-ch-ua-mobile': '?0', 
-                  'sec-ch-ua-model': '""', 
-                  'sec-ch-ua-platform': '"Windows"', 
-                  'sec-ch-ua-platform-version': '"15.0.0"', 
-                  'sec-ch-ua-wow64': '?0', 
-                  'sec-fetch-dest': 'document', 
-                  'sec-fetch-mode': 'navigate', 
-                  'sec-fetch-site': 'none', 
-                  'sec-fetch-user': '?1', 
-                  'service-worker-navigation-preload': 'true', 
-                  'upgrade-insecure-requests': '1', 
-                  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36', 
-                  'x-client-data': 'CKS1yQEIh7bJAQiitskBCKmdygEI6NTKAQiQ+soBCJahywEI85jNAQiFoM0BCNy9zQEI38TNAQi5ys0BCMXRzQEI1NTNAQjM1s0BCOLWzQEI+cDUFRi60s0BGOuNpRc='
-                }
-              };
-    
-            const response = await axios(config as AxiosRequestConfig);
-            const responseData = response.data;
-    
-            const INNERTUBE_API_KEY = innertubeApiKeyRegex.exec(responseData)[1]
-            let INNERTUBE_CONTEXT = JSON.parse(innertubeContextRegex.exec(responseData)[1].replaceAll(/\n\s+/g,''))
-    
-            INNERTUBE_CONTEXT['adSignalsInfo'] = {'params':[
-                {
-                    "key": "dt",
-                    "value": "1696043921913"
-                },
-                {
-                    "key": "flash",
-                    "value": "0"
-                },
-                {
-                    "key": "frm",
-                    "value": "0"
-                },
-                {
-                    "key": "u_tz",
-                    "value": "-420"
-                },
-                {
-                    "key": "u_his",
-                    "value": "5"
-                },
-                {
-                    "key": "u_h",
-                    "value": "1440"
-                },
-                {
-                    "key": "u_w",
-                    "value": "2560"
-                },
-                {
-                    "key": "u_ah",
-                    "value": "1392"
-                },
-                {
-                    "key": "u_aw",
-                    "value": "2560"
-                },
-                {
-                    "key": "u_cd",
-                    "value": "24"
-                },
-                {
-                    "key": "bc",
-                    "value": "31"
-                },
-                {
-                    "key": "bih",
-                    "value": "1283"
-                },
-                {
-                    "key": "biw",
-                    "value": "1511"
-                },
-                {
-                    "key": "brdim",
-                    "value": "0,0,0,0,2560,0,2560,1392,1528,1283"
-                },
-                {
-                    "key": "vis",
-                    "value": "1"
-                },
-                {
-                    "key": "wgl",
-                    "value": "true"
-                },
-                {
-                    "key": "ca_type",
-                    "value": "image"
-                }
-            ]}
-            INNERTUBE_CONTEXT['request']['consistencyTokenJars'] = []
-            INNERTUBE_CONTEXT['request']['internalExperimentFlags'] = [
-                {
-                    "key": "force_enter_once_in_webview",
-                    "value": "true"
-                }
-            ]
-    
-            let returnData = {
-                'INNERTUBE_API_KEY': INNERTUBE_API_KEY, 
-                'INNERTUBE_CONTEXT': INNERTUBE_CONTEXT, 
-                'data': responseData};
-            return returnData;
-        } catch (error) {
-            // console.log(error)
-            return null;
-        }
+    export function getYouTubeSapisidHashAuth(SAPISID: string, ORIGIN = 'https://www.youtube.com'){
+        let timeStampSecondsStr = String(new Date().getTime()).slice(0,10);
+        let dataString = [timeStampSecondsStr, SAPISID, ORIGIN].join(' ');
+        let data = Uint8Array.from(Array.from(dataString).map(letter => letter.charCodeAt(0)));
+        let shaDigest = sha1.createHash().update(data).digest("hex");
+        let SAPISIDHASH = `SAPISIDHASH ${timeStampSecondsStr}_${shaDigest}`;
+        return SAPISIDHASH;
+    }
+    export function getAdSignalsInfoParams(){
+        return [{"key":"dt","value":"1696043921913"},{"key":"flash","value":"0"},{"key":"frm","value":"0"},{"key":"u_tz","value":"-420"},{"key":"u_his","value":"5"},{"key":"u_h","value":"1440"},{"key":"u_w","value":"2560"},{"key":"u_ah","value":"1392"},{"key":"u_aw","value":"2560"},{"key":"u_cd","value":"24"},{"key":"bc","value":"31"},{"key":"bih","value":"1283"},{"key":"biw","value":"1511"},{"key":"brdim","value":"0,0,0,0,2560,0,2560,1392,1528,1283"},{"key":"vis","value":"1"},{"key":"wgl","value":"true"},{"key":"ca_type","value":"image"}];
+    }
+    export function getHeaders(cookie_jar: CookieJar|undefined = undefined){
+        return { 
+            'authority': 'www.youtube.com', 
+            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7', 
+            'accept-language': 'en-US,en;q=0.9', 
+            'cache-control': 'max-age=0', 
+            'sec-ch-ua': '"Google Chrome";v="117", "Not;A=Brand";v="8", "Chromium";v="117"', 
+            'sec-ch-ua-arch': '"x86"', 
+            'sec-ch-ua-bitness': '"64"', 
+            'sec-ch-ua-full-version': '"117.0.5938.92"', 
+            'sec-ch-ua-full-version-list': '"Google Chrome";v="117.0.5938.92", "Not;A=Brand";v="8.0.0.0", "Chromium";v="117.0.5938.92"', 
+            'sec-ch-ua-mobile': '?0', 
+            'sec-ch-ua-model': '""', 
+            'sec-ch-ua-platform': '"Windows"', 
+            'sec-ch-ua-platform-version': '"15.0.0"', 
+            'sec-ch-ua-wow64': '?0', 
+            'sec-fetch-dest': 'document', 
+            'sec-fetch-mode': 'navigate', 
+            'sec-fetch-site': 'none', 
+            'sec-fetch-user': '?1', 
+            'service-worker-navigation-preload': 'true', 
+            'upgrade-insecure-requests': '1', 
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36', 
+            'x-client-data': 'CKS1yQEIh7bJAQiitskBCKmdygEI6NTKAQiQ+soBCJahywEI85jNAQiFoM0BCNy9zQEI38TNAQi5ys0BCMXRzQEI1NTNAQjM1s0BCOLWzQEI+cDUFRi60s0BGOuNpRc=',
+            'Cookies': cookie_jar?.toString()
+          };
     }
     
     async function getYoutubePlaylistContinuation(innertube_api_key: string, continuationKey: string, context: any, url: string, trackingParams: any){
@@ -304,14 +216,6 @@ export namespace YouTube {
             Alert.alert("Account Playlist Finder Error:", error)
             return undefined;
         }
-    }
-    export function getYouTubeSapisidHashAuth(SAPISID: string, ORIGIN = 'https://www.youtube.com'){
-        let timeStampSecondsStr = String(new Date().getTime()).slice(0,10);
-        let dataString = [timeStampSecondsStr, SAPISID, ORIGIN].join(' ');
-        let data = Uint8Array.from(Array.from(dataString).map(letter => letter.charCodeAt(0)));
-        let shaDigest = sha1.createHash().update(data).digest("hex");
-        let SAPISIDHASH = `SAPISIDHASH ${timeStampSecondsStr}_${shaDigest}`;
-        return SAPISIDHASH;
     }
 
     export async function insertIntoYouTubePlaylist(playlistName: string, tracks: Track[]){
