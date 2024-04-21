@@ -238,4 +238,50 @@ export namespace AmazonMusic {
             return amzn_track_data;
         } catch (error) { return { "error": String(error) }; }
     }
+
+    export async function searchAmazonMusic(query: string){
+        try {		
+            const url = `https://music.amazon.com/search/${query.replace(/\s+/g, '+').replace(/[^A-Za-z0-9+]+/g, '')}`
+            const filter = {'IsLibrary': ["false"]}
+            const keyword = {
+                "interface": "Web.TemplatesInterface.v1_0.Touch.SearchTemplateInterface.SearchKeywordClientInformation",
+                "keyword": ""
+            }
+            
+            const amzn_music = await getAmznMusicData(url);
+            if("error" in amzn_music) throw amzn_music.error;
+            const show_home = await getShowHomeData(amzn_music, url);
+            if("error" in show_home) throw show_home.error;
+        
+            const auth_header = JSON.parse(show_home.methods[0].header);
+        
+            const user_hash = getUserHash();
+            const x_amzn_auth = getXAmznAuth(amzn_music);
+            const x_amzn_csrf = getAmznCsrf(amzn_music);
+            const x_amzn_video_player_token = getAmznVideoPlayerToken(auth_header);
+            const request_headers = getAmznMusicRequestHeaders(x_amzn_auth, amzn_music, x_amzn_csrf, x_amzn_video_player_token, url);
+            const request_payload = {
+                "filter":JSON.stringify(filter),
+                "keyword": JSON.stringify(keyword),
+                "suggestedKeyword": query,
+                "userHash":	JSON.stringify(user_hash),
+                "headers": JSON.stringify(request_headers)
+            }
+            const response = (await axios({'method': 'POST', 'url': "https://na.mesk.skill.music.a2z.com/api/showSearch", 'headers': getAmznMusicHeaders(), 'data': request_payload})).data;
+            let song_widgets_index = 2;
+            const widgets = response.methods[0].template.widgets
+            for(let i = 0; i < widgets.length; i++){
+                if(widgets[i].header == "Songs"){
+                    song_widgets_index = i;
+                }
+            }
+            const tracks: {
+                item: {primaryLink: {deeplink: string}}
+                primaryText: string,
+                secondaryText: string
+            }[] = response.methods[0].template.widgets[song_widgets_index].items;
+
+            return tracks;
+        } catch (error) { return {"error": String(error)}; }
+    } 
 }

@@ -1,7 +1,7 @@
-import axios from "axios";
+import axios, { AxiosProxyConfig } from "axios";
 import { ResponseError } from "./utils/types";
 
-namespace Proxy {
+export namespace Proxy {
     export type Proxy = { ip: string; port: number };
     
     function getRandomIndex(max: number) {
@@ -23,6 +23,9 @@ namespace Proxy {
             }
             return proxies;
         } catch (error) { return { "error": String(error) }; }
+    }
+    export function getAxiosProxies(proxies: Proxy[]): AxiosProxyConfig[]{
+        return proxies.map(p => ({"host": p.ip, "port": p.port}));
     }
     export function getRandomProxy(proxies: Proxy[]){
         return proxies[getRandomIndex(proxies.length)];

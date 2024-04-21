@@ -1,11 +1,11 @@
-import { Proxy } from "./lib/proxy"
-import { Illusi } from "./src/illusi"
-import { Musi } from "./lib/musi"
-import { Spotify } from "./lib/spotify"
+import { Proxy } from "./src/proxy"
+import { Musi } from "./src/musi"
+import { Spotify } from "./src/spotify/spotify"
+import { AmazonMusic } from "./src/amazon_music"
 
 export {
-    Illusi,
     Proxy,
     Musi,
-    Spotify
+    Spotify,
+    AmazonMusic
 }

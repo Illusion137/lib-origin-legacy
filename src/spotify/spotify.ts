@@ -1,0 +1,409 @@
+import axios, { AxiosProxyConfig } from "axios";
+import { ResponseError } from "../utils/types";
+import { CookieJar } from "../utils/cookie_util";
+import { Album } from "./types/Album";
+import { UserPlaylist } from "./types/UserPlaylist";
+import { Artist } from "./types/Artist";
+import { SearchResult } from "./types/SearchResult";
+import { Home } from "./types/Home";
+import { Proxy } from "../proxy";
+import { Library } from "./types/Library";
+import { Collection } from "./types/Collection";
+import { InLibrary } from "./types/InLibrary";
+import { Credits } from "./types/Credits";
+
+export namespace Spotify {
+    interface ClientSession {
+        accessToken: string,
+        clientId: string,
+        isAnonymous: boolean,
+        accessTokenExpirationTimestampMs: number
+    }
+    interface ClientToken {
+        granted_token: {
+            token: string,
+            expires_after_seconds: number,
+            refresh_after_seconds: number,
+            domains: string[],
+        }
+    }
+    interface Client { 
+        session: ClientSession, 
+        client_token: ClientToken 
+    }
+
+    type Opts = { cookie_jar?: CookieJar, client?: Client, proxy?: AxiosProxyConfig };
+    export type Playlist = Album | UserPlaylist | Collection;
+
+    export const valid_playlist_regex = /(https?:\/\/)open\.spotify\.com\/(playlist|album|collection)\/.+/i
+    export const valid_artist_regex = /(https?:\/\/)open\.spotify\.com\/artist\/.+/i
+
+    export function encodeParams(data: Record<string, any>){
+        const encoded_params = [];
+        for(const key of Object.keys(data)){
+            const param = data[key];
+            encoded_params.push(`${param}=${encodeURIComponent(JSON.stringify(param))}`);
+        }
+        return encoded_params.join('&');
+    }
+
+    export function getHeaders(client: (Client|undefined) = undefined, cookie_jar: (CookieJar|undefined) = undefined){
+        const default_headers: any = {
+            // "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "cache-control": "max-age=0",
+            "sec-ch-ua": "\"Google Chrome\";v=\"117\", \"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"117\"",
+            "sec-fetch-user": "?1",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept-language": "en-US,en",
+            "app-platform": "WebPlayer",
+            "content-type": "application/json;charset=UTF-8",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-site",
+            "spotify-app-version": "1.2.21.625.gab84de47",
+            "Referer": "https://open.spotify.com/",
+            "Referrer-Policy": "strict-origin-when-cross-origin",
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1',
+            "upgrade-insecure-requests": "1",
+            'Access-Control-Allow-Origin' : '*',
+        }
+        if(cookie_jar !== undefined) 
+            default_headers['Cookies'] = cookie_jar.toString();
+        if(client !== undefined){
+            default_headers['authorization'] = `Bearer ${client?.session.accessToken}`;
+            default_headers['client-token'] = client?.client_token.granted_token.token;
+        }
+        return default_headers;
+    }
+
+    export async function getClient(url: string, cookie_jar: (CookieJar | undefined) = undefined) : Promise< Client|ResponseError >{
+        try {
+            const headers = getHeaders();
+            const page = (await axios({'method': 'GET', 'url': url, 'headers': headers})).data
+            const session_regex = /<script id="session" data-testid="session" type="application\/json">(.+?)<\/script>/is
+            const session_exec = session_regex.exec(page);
+            if(session_exec === null) throw "Couldn't get Client-Session"; 
+            
+            const session: ClientSession  = JSON.parse(session_exec[1]);
+
+            const headers2 = {
+                "accept": "application/json",
+                "accept-language": "en-US,en;q=0.9",
+                "content-type": "application/json",
+                "sec-ch-ua": "\"Chromium\";v=\"116\", \"Not)A;Brand\";v=\"24\", \"Google Chrome\";v=\"116\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Windows\"",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-site",
+                "Referer": "https://open.spotify.com/",
+                "Referrer-Policy": "strict-origin-when-cross-origin",
+                "Cookies": cookie_jar?.toString() as string
+            };
+
+            const client_token = await fetch("https://clienttoken.spotify.com/v1/clienttoken", {
+                "headers": headers2,
+                "body": "{\"client_data\":{\"client_version\":\"1.2.21.625.gab84de47\",\"client_id\":\"" + session.clientId + "\",\"js_sdk_data\":{\"device_brand\":\"unknown\",\"device_model\":\"unknown\",\"os\":\"windows\",\"os_version\":\"NT 10.0\",\"device_id\":\"null\",\"device_type\":\"computer\"}}}",
+                "method": "POST"
+            });
+
+            return { 'session': session, 'client_token': await client_token.json() as ClientToken };
+        } catch (error) { return { "error": String(error) }; }
+    }
+    export function uriToId(uri: string){
+        const split = uri.split(':');
+        return split[split.length - 1];
+    }
+    export async function getPlaylist(url: string, opts: {"limit"?: number, "offset"?: number} & Opts): Promise<Playlist | ResponseError> {
+        try {
+            if(valid_playlist_regex.test(url) === false) throw "Not a known Spotify Playlist URL";
+            if(opts.limit === undefined) opts.limit = 100;
+            if(opts.offset === undefined) opts.limit = 0;
+
+            const playlist_id = url.replace(/https:\/\/open\.spotify\.com\/(album|playlist|collection)\//,'');
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+
+            let playlist_data: Playlist;
+    
+            if(url.includes("/album/")){
+                const params = {
+                    operationName: "getAlbum",
+                    variables: {"uri": `spotify:album:${playlist_id}`,"locale":"","offset": opts.offset,"limit": opts.limit},
+                    extensions: {"persistedQuery":{"version":1,"sha256Hash":"46ae954ef2d2fe7732b4b2b4022157b2e18b7ea84f70591ceb164e4de1b5d5d3"}}
+                }
+                playlist_data = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`, 
+                    { headers, proxy: opts.proxy }) ).data as Album;
+            } else if(url.includes("/playlist/")){
+                const params = {
+                    operationName: "fetchPlaylist",
+                    variables: {"uri": `spotify:playlist:${playlist_id}`,"offset": opts.offset, "limit": opts.limit},
+                    extensions: {"persistedQuery":{"version":1,"sha256Hash":"73a3b3470804983e4d55d83cd6cc99715019228fd999d51429cc69473a18789d"}}
+                }
+                playlist_data = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`,
+                    {  headers, proxy: opts.proxy }) ).data as UserPlaylist;
+            }
+            else if(url.includes('/collection/')){
+                if(opts.cookie_jar === undefined) throw "Undefined Cookies for Spotify Collection";
+                const params = {
+                    operationName: "fetchLibraryTracks",
+                    variables: {"offset": opts.offset,"limit": opts.limit},
+                    extensions: {"persistedQuery":{"version":1,"sha256Hash":"8474ec383b530ce3e54611fca2d8e3da57ef5612877838b8dbf00bd9fc692dfb"}}
+                }
+                playlist_data = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`,
+                    { headers, proxy: opts.proxy }) ).data as Collection;
+            }
+            else throw `url includes an unknown playlist type`;
+            
+            return playlist_data;
+        } catch (error) { return { 'error': String(error) }; }
+    
+    }
+    
+    export async function getArtist(url: string, opts: {"locale"?: string, "include_pre_releases"?: boolean} & Opts): Promise<Artist | ResponseError>{
+        try{
+            if(valid_artist_regex.test(url) === false) throw "Not a known Spotify Artist URL";
+
+            const artist_id = url.replace(/https:\/\/open\.spotify\.com\/artist\//,'');
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+            
+            const params = {
+                operationName: "queryArtistOverview",
+                variables: {"uri": `spotify:artist:${artist_id}`, "locale": opts.locale ?? "", "includePrerelease": opts.include_pre_releases ?? true},
+                extensions: {"persistedQuery":{"version":1,"sha256Hash":"da986392124383827dc03cbb3d66c1de81225244b6e20f8d78f9f802cc43df6e"}}
+            }
+
+            const artist_data = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`, 
+            { headers, proxy: opts.proxy }) ).data as Artist;
+            
+            return artist_data;
+        } catch (error) { return { "error": String(error) }; }
+    }
+
+    export async function search(query: string, opts: {
+        "limit"?: number,
+        "offset"?: number,
+        "top_results"?: number,
+        "include_audiobooks"?: boolean,
+        "include_has_concerts_field"?: boolean,
+        "include_pre_releases"?: boolean,
+        "include_local_concerts_field"?: boolean
+    } & Opts): Promise<SearchResult | ResponseError>{
+        try{
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client);
+
+            const params = {
+                operationName:"searchDesktop",
+                variables:{
+                    "searchTerm": query.replace(/\s+/g, '+').replace(/[^A-Za-z0-9+]+/g, ''),
+                    "offset": opts.offset ?? 0,
+                    "limit": opts.limit ?? 10,
+                    "numberOfTopResults": opts.top_results ?? 5,
+                    "includeAudiobooks": opts.include_audiobooks ?? true,
+                    "includeArtistHasConcertsField": opts.include_has_concerts_field ?? false,
+                    "includePreReleases": opts.include_pre_releases ?? false,
+                    "includeLocalConcertsField": opts.include_local_concerts_field ?? false
+                },
+                extensions:{"persistedQuery":{"version":1,"sha256Hash":"7a60179c5d6b6c385e849438efb1398392ef159d82f2ad7158be5e80bf7817a9"}}
+            }
+            const search_data = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`, 
+            { headers, proxy: opts.proxy }) ).data as SearchResult;
+            return search_data;
+        } catch (error) { return { "error": String(error) }; }
+    }
+
+    export async function home(query: string, opts: {
+        "sp_t_cookie": string,
+        "time_zone"?: string
+        "country"?: string,
+        "section_items_limit": number,
+
+    } & Opts): Promise<Home | ResponseError>{
+        try{
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client);
+            
+            const params = {
+                operationName: "home",
+                variables:{"timeZone": opts.time_zone ?? "America/Los_Angeles","sp_t": opts.sp_t_cookie,"country": opts.country ?? "US","facet":null, "sectionItemsLimit": opts.section_items_limit ?? 10},
+                extensions:{"persistedQuery":{"version":1,"sha256Hash":"373a2db252f6a4620226c22808f016d634f748a36f06f03337e6158bf4f08bca"}}
+            }
+            const home_data = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`, 
+            { headers, proxy: opts.proxy }) ).data as Home;
+            return home_data;
+        } catch (error) { return { "error": String(error) }; }
+    }
+
+    export async function getAllPlaylistsFromAccount(opts: Opts, limit: number = 10): Promise<Map<string, string> | ResponseError>{
+        try {
+            if(opts.cookie_jar === undefined) throw "Undefined Cookies for Spotify Account Playlists";
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+
+            const params = {
+                "operationName": "libraryV3",
+                "variables": {
+                    "filters":["Playlists"],
+                    "order":null,
+                    "textFilter":"",
+                    "features": ["LIKED_SONGS","YOUR_EPISODES"],
+                    "limit":10,
+                    "offset":0,
+                    "flatten":false,
+                    "expandedFolders":[],
+                    "folderUri":null,
+                    "includeFoldersWhenFlattening":true,
+                    "withCuration":false
+                },
+                "extensions": {"persistedQuery":{"version":1,"sha256Hash":"17d801ba80f3a3d7405966641818c334fe32158f97e9e8b38f1a92f764345df9"}}
+            }
+            const library: Library = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`, 
+            { headers, proxy: opts.proxy}) ).data;
+            const playlist_items = library.data.me.libraryV3.items;
+            const mapped_data = new Map<string, string>();
+            for(const playlist of playlist_items){
+                try {                
+                    const uri = playlist.item._uri
+                    const split_uri = uri.split(':');
+                    mapped_data.set(playlist.item.data.name ?? "_unknown_", `https://open.spotify.com/${split_uri[1]}/${split_uri[2]}`);
+                } catch (error) { }
+            }
+            return mapped_data;
+        } catch (error) { return { "error": String(error) }; }
+    }
+
+    export async function getCredits(opts: {"uri_id": string} & Opts){
+        try {
+            if(opts.cookie_jar === undefined) throw "Undefined Cookies for Spotify Library";
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+            
+            const credits: Credits = ( await axios.get(`https://spclient.wg.spotify.com/track-credits-view/v0/experimental/${opts.uri_id}/credits`, 
+            { headers, proxy: opts.proxy}) ).data;
+            return credits;
+        } catch (error) { return { "error": String(error) }; }
+    }
+
+    // opts.uris EXAMPLE: "spotify:track:1xsY8IFXUrxeet1Fcmk4oC"
+    export async function areTracksInLibrary(opts: {"uris": string[]} & Opts){
+        try {
+            if(opts.cookie_jar === undefined) throw "Undefined Cookies for Spotify Library";
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+            
+            const params = {
+                "operationName": "areTracksInLibrary",
+                "variables": { "uris": opts.uris },
+                "extensions": {"persistedQuery":{"version":1,"sha256Hash":"beaad62a3d5556d70764cebb98b588e44a0c06ade6136f6972aaca4e91f93807"}}
+            };
+            const in_library: InLibrary = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`, 
+            { headers, proxy: opts.proxy}) ).data;
+            return in_library;
+        } catch (error) { return { "error": String(error) }; }
+    }
+
+    export async function addTracksToLibrary(opts: {"uris": string[]} & Opts){
+        try{
+            if(opts.cookie_jar === undefined) throw "Undefined Cookies for Add To Spotify Library";
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+            
+            const payload = {
+                "operationName": "addToLibrary",
+                "variables": { "uris": opts.uris },
+                "extensions": { "persistedQuery": { "version": 1, "sha256Hash": "a3c1ff58e6a36fec5fe1e3a193dc95d9071d96b9ba53c5ba9c1494fb1ee73915" } }
+            };
+            const result = ( await axios.post(`https://api-partner.spotify.com/pathfinder/v1/query`, 
+                payload, { headers, proxy: opts.proxy}) ).data;
+            return result;
+        } catch (error) { return { "error": String(error) }; }
+    }
+
+    // opts.playlist_uri EXAMPLE: "spotify:playlist:4uNs2lqeO0Ec43d2Sp3yp4"
+    export async function addTracksToPlaylist(opts: {
+        "uris": string[],
+        "playlist_uri": string,
+        "move_type"?: "BOTTOM_OF_PLAYLIST"
+        "from_uid"?: string
+    } & Opts){
+        try{
+            if(opts.cookie_jar === undefined) throw "Undefined Cookies for Add To Spotify Library";
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+            
+            const payload = {
+                "operationName": "addToPlaylist",
+                "variables": {
+                    "uris": opts.uris,
+                    "playlistUri": opts.playlist_uri,
+                    "newPosition": {
+                        "moveType": opts.move_type ?? "BOTTOM_OF_PLAYLIST",
+                        "fromUid": opts.from_uid ?? null
+                    }
+                },
+                "extensions": { "persistedQuery": { "version": 1, "sha256Hash": "47c69e71df79e3c80e4af7e7a9a727d82565bb20ae20dc820d6bc6f94def482d" } }
+            };
+            const result = ( await axios.post(`https://api-partner.spotify.com/pathfinder/v1/query`, 
+                payload, { headers, proxy: opts.proxy}) ).data;
+            return result;
+        } catch (error) { return { "error": String(error) }; }
+    }
+
+    export async function deleteTracksToLibrary(opts: {"uris": string[]} & Opts){
+        try{
+            if(opts.cookie_jar === undefined) throw "Undefined Cookies for Remove from Spotify Library";
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+            
+            const payload = {
+                "operationName": "removeFromLibrary",
+                "variables": { "uris": opts.uris },
+                "extensions": { "persistedQuery": { "version": 1, "sha256Hash": "a3c1ff58e6a36fec5fe1e3a193dc95d9071d96b9ba53c5ba9c1494fb1ee73915" } }
+            };
+            const result = ( await axios.post(`https://api-partner.spotify.com/pathfinder/v1/query`, 
+                payload, { headers, proxy: opts.proxy}) ).data;
+            return result;
+        } catch (error) { return { "error": String(error) }; }
+    }
+
+    export async function deleteTracksToPlaylist(opts: {
+        "uids": string[],
+        "playlist_uri": string,
+        "move_type"?: "BOTTOM_OF_PLAYLIST"
+        "from_uid"?: string
+    } & Opts){
+        try{
+            if(opts.cookie_jar === undefined) throw "Undefined Cookies for Add To Spotify Library";
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+            
+            const payload = {
+                "operationName": "removeFromPlaylist",
+                "variables": {
+                    "playlistUri": opts.playlist_uri,
+                    "uids": opts.uids
+                },
+                "extensions": { "persistedQuery": { "version": 1, "sha256Hash": "47c69e71df79e3c80e4af7e7a9a727d82565bb20ae20dc820d6bc6f94def482d" } }
+            };
+            const result = ( await axios.post(`https://api-partner.spotify.com/pathfinder/v1/query`, 
+                payload, { headers, proxy: opts.proxy}) ).data;
+            return result;
+        } catch (error) { return { "error": String(error) }; }
+    }
+}
