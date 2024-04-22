@@ -96,9 +96,13 @@ export class CookieJar{
     updateWithAxios(response: AxiosResponse){
         const set_cookies = response.headers['set-cookie'];
         if(set_cookies === undefined) return;
-        this.merge(CookieJar.fromString(set_cookies));
+        this.merge(CookieJar.fromStrings(set_cookies));
     }
-    static fromString(cstrings: string[]): CookieJar {
+    static fromString(cstring: string): CookieJar {
+        const jar: Cookie[] = cstring.split('; ').map(cstr => Cookie.fromString(cstr));
+        return new CookieJar(jar.filter(cookie => !cookie.hasExpired()));
+    }
+    static fromStrings(cstrings: string[]): CookieJar {
         const jar: Cookie[] = cstrings.map(cstring => Cookie.fromString(cstring));
         return new CookieJar(jar.filter(cookie => !cookie.hasExpired()));
     }

@@ -11,6 +11,7 @@ import { Library } from "./types/Library";
 import { Collection } from "./types/Collection";
 import { InLibrary } from "./types/InLibrary";
 import { Credits } from "./types/Credits";
+import { ProfileData } from "./types/ProfileData";
 
 export namespace Spotify {
     interface ClientSession {
@@ -33,16 +34,17 @@ export namespace Spotify {
     }
 
     type Opts = { cookie_jar?: CookieJar, client?: Client, proxy?: AxiosProxyConfig };
-    export type Playlist = Album | UserPlaylist | Collection;
 
-    export const valid_playlist_regex = /(https?:\/\/)open\.spotify\.com\/(playlist|album|collection)\/.+/i
+    export const valid_playlist_regex = /(https?:\/\/)open\.spotify\.com\/(playlist)\/.+/i
+    export const valid_album_regex = /(https?:\/\/)open\.spotify\.com\/(album)\/.+/i
+    export const valid_collection_regex = /(https?:\/\/)open\.spotify\.com\/(collection)\/.+/i
     export const valid_artist_regex = /(https?:\/\/)open\.spotify\.com\/artist\/.+/i
 
     export function encodeParams(data: Record<string, any>){
         const encoded_params = [];
         for(const key of Object.keys(data)){
             const param = data[key];
-            encoded_params.push(`${param}=${encodeURIComponent(JSON.stringify(param))}`);
+            encoded_params.push(`${key}=${encodeURIComponent(typeof(param) === "object" ? JSON.stringify(param) : param )}`);
         }
         return encoded_params.join('&');
     }
@@ -69,7 +71,7 @@ export namespace Spotify {
             "upgrade-insecure-requests": "1",
             'Access-Control-Allow-Origin' : '*',
         }
-        if(cookie_jar !== undefined) 
+        if(cookie_jar !== undefined)
             default_headers['Cookies'] = cookie_jar.toString();
         if(client !== undefined){
             default_headers['authorization'] = `Bearer ${client?.session.accessToken}`;
@@ -116,54 +118,89 @@ export namespace Spotify {
         const split = uri.split(':');
         return split[split.length - 1];
     }
-    export async function getPlaylist(url: string, opts: {"limit"?: number, "offset"?: number} & Opts): Promise<Playlist | ResponseError> {
+    export async function getPlaylist(url: string, opts: {"limit"?: number, "offset"?: number} & Opts): Promise<UserPlaylist | ResponseError> {
         try {
             if(valid_playlist_regex.test(url) === false) throw "Not a known Spotify Playlist URL";
-            if(opts.limit === undefined) opts.limit = 100;
-            if(opts.offset === undefined) opts.limit = 0;
 
-            const playlist_id = url.replace(/https:\/\/open\.spotify\.com\/(album|playlist|collection)\//,'');
+            const playlist_id = url.replace(/https:\/\/open\.spotify\.com\/(playlist)\//,'');
             const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
             
             if("error" in client) throw client.error;
             const headers = getHeaders(client, opts.cookie_jar);
 
-            let playlist_data: Playlist;
-    
-            if(url.includes("/album/")){
-                const params = {
-                    operationName: "getAlbum",
-                    variables: {"uri": `spotify:album:${playlist_id}`,"locale":"","offset": opts.offset,"limit": opts.limit},
-                    extensions: {"persistedQuery":{"version":1,"sha256Hash":"46ae954ef2d2fe7732b4b2b4022157b2e18b7ea84f70591ceb164e4de1b5d5d3"}}
-                }
-                playlist_data = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`, 
-                    { headers, proxy: opts.proxy }) ).data as Album;
-            } else if(url.includes("/playlist/")){
-                const params = {
-                    operationName: "fetchPlaylist",
-                    variables: {"uri": `spotify:playlist:${playlist_id}`,"offset": opts.offset, "limit": opts.limit},
-                    extensions: {"persistedQuery":{"version":1,"sha256Hash":"73a3b3470804983e4d55d83cd6cc99715019228fd999d51429cc69473a18789d"}}
-                }
-                playlist_data = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`,
-                    {  headers, proxy: opts.proxy }) ).data as UserPlaylist;
+            const params = {
+                operationName: "fetchPlaylist",
+                variables: {"uri": `spotify:playlist:${playlist_id}`,"offset": opts.offset ?? 0, "limit": opts.limit ?? 100},
+                extensions: {"persistedQuery":{"version":1,"sha256Hash":"73a3b3470804983e4d55d83cd6cc99715019228fd999d51429cc69473a18789d"}}
             }
-            else if(url.includes('/collection/')){
-                if(opts.cookie_jar === undefined) throw "Undefined Cookies for Spotify Collection";
-                const params = {
-                    operationName: "fetchLibraryTracks",
-                    variables: {"offset": opts.offset,"limit": opts.limit},
-                    extensions: {"persistedQuery":{"version":1,"sha256Hash":"8474ec383b530ce3e54611fca2d8e3da57ef5612877838b8dbf00bd9fc692dfb"}}
-                }
-                playlist_data = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`,
-                    { headers, proxy: opts.proxy }) ).data as Collection;
-            }
-            else throw `url includes an unknown playlist type`;
+            const playlist_data: UserPlaylist = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`,
+                {  headers, proxy: opts.proxy }) ).data as UserPlaylist;
             
             return playlist_data;
         } catch (error) { return { 'error': String(error) }; }
-    
+    }
+    export async function getAlbum(url: string, opts: {"limit"?: number, "offset"?: number} & Opts): Promise<Album | ResponseError> {
+        try {
+            if(valid_album_regex.test(url) === false) throw "Not a known Spotify Album URL";
+
+            const album_id = url.replace(/https:\/\/open\.spotify\.com\/(album)\//,'');
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+
+            const params = {
+                operationName: "getAlbum",
+                variables: {"uri": `spotify:album:${album_id}`,"locale":"","offset": opts.offset ?? 0,"limit": opts.limit ?? 100},
+                extensions: {"persistedQuery":{"version":1,"sha256Hash":"46ae954ef2d2fe7732b4b2b4022157b2e18b7ea84f70591ceb164e4de1b5d5d3"}}
+            }
+            const album_data: Album = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`,
+                {  headers, proxy: opts.proxy }) ).data as Album;
+            
+            return album_data;
+        } catch (error) { return { 'error': String(error) }; }
+    }
+    export async function getCollection(url: string, opts: {"limit"?: number, "offset"?: number} & Opts): Promise<Collection | ResponseError> {
+        try {
+            if(valid_collection_regex.test(url) === false) throw "Not a known Spotify Collection URL";
+            if(opts.cookie_jar === undefined) throw "Undefined Cookies for Spotify Collection";
+
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+
+            const params = {
+                operationName: "fetchLibraryTracks",
+                variables: {"offset": opts.offset ?? 0,"limit": opts.limit ?? 100},
+                extensions: {"persistedQuery":{"version":1,"sha256Hash":"beaad62a3d5556d70764cebb98b588e44a0c06ade6136f6972aaca4e91f93807"}}
+            };
+            const collection_data: Collection = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`,
+            {  headers, proxy: opts.proxy }) ).data as Collection;
+            
+            return collection_data;
+        } catch (error) { return { 'error': String(error) }; }
     }
     
+    export async function getProfileAccountAttributes(opts: Opts){
+        try {
+            if(opts.cookie_jar === undefined) throw "Undefined Cookies for Profile Account Attributes";
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+            console.log(headers);
+            const params = {
+                operationName: "profileAndAccountAttributes",
+                variables: {},
+                extensions: {"persistedQuery":{"version":1,"sha256Hash":"e0298c5d974e4713ffdcc14980b285cd8e0826412c1ce33db57e0e576fea0f68"}}
+            };
+            const account_data: ProfileData = ( await axios.get(`https://api-partner.spotify.com/pathfinder/v1/query?${encodeParams(params)}`,
+            {  headers, proxy: opts.proxy }) ).data as ProfileData;
+            return account_data;
+        } catch (error) { return { 'error': String(error) }; }
+    }
+
     export async function getArtist(url: string, opts: {"locale"?: string, "include_pre_releases"?: boolean} & Opts): Promise<Artist | ResponseError>{
         try{
             if(valid_artist_regex.test(url) === false) throw "Not a known Spotify Artist URL";
@@ -220,7 +257,7 @@ export namespace Spotify {
         } catch (error) { return { "error": String(error) }; }
     }
 
-    export async function home(query: string, opts: {
+    export async function getHome(query: string, opts: {
         "sp_t_cookie": string,
         "time_zone"?: string
         "country"?: string,
