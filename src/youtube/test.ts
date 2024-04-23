@@ -1,5 +1,5 @@
 import axios from "axios";
-import * as YouTube from "./index";
+import * as YouTube from "./youtube";
 import ContinuationItem from "./types/ContinuationItem";
 
 async function main(){

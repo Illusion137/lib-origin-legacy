@@ -7,7 +7,7 @@ import * as converter from "./type_converter"
 import * as ytcfg from "./ytcfg"
 import assert from "./assert";
 import ContinuationItem from './types/ContinuationItem';
-import { ContentItem, Chip, YTCFG } from './types/types';
+import { ContentItem, Chip } from './types/types';
 import PostClientContext from "./types/PostClientContext";
 import { decode_hex } from './html_extractor';
 

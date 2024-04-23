@@ -42,7 +42,10 @@ export class Cookie {
     getData(): CookieData { return this.#data; }
     static fromString(cstring: string): Cookie {
         const attributes = cstring.split(';');
-        const key_value = attributes[0].split('=');
+        const key_value_split = attributes[0].split('=');
+        const key = key_value_split.shift() as string;
+        const value = key_value_split.join('=');
+
         const expire_attr_index = attributes.findIndex(attr => attr.includes("Expires"));
         const domain_attr_index = attributes.findIndex(attr => attr.includes("Domain"));
         const path_attr_index = attributes.findIndex(attr => attr.includes("Path"));
@@ -58,8 +61,8 @@ export class Cookie {
         const secure = attributes.findIndex(attr => attr.includes("Secure")) !== -1;
         
         return new Cookie({
-            name: key_value[0],
-            value: key_value[1],
+            name: key,
+            value: value,
             domain: domain,
             path: path,
             expires: expires,
