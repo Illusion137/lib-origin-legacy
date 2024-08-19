@@ -1,0 +1,19 @@
+import * as Origin from '../../index'
+import { generateNewUID } from '../../src/utils/util';
+import { MusicServicePlaylistTitle, MusicServicePlaylistURL } from './types';
+
+export async function spotify_get_user_playlists(): Promise<Map<MusicServicePlaylistTitle, MusicServicePlaylistURL>> {
+    const user_playlists_response = await Origin.Spotify.getAllPlaylistsFromAccount({});
+    if("error" in user_playlists_response) {
+        return new Map();
+    }
+    return user_playlists_response;
+}
+
+export async function amazon_music_get_user_playlists(): Promise<Map<MusicServicePlaylistTitle, MusicServicePlaylistURL>> {
+    const user_playlists_response = await Origin.AmazonMusic.getAllPlaylistsFromAccount({});
+    if("error" in user_playlists_response) {
+        return new Map();
+    }
+    return user_playlists_response;
+}

@@ -18,7 +18,7 @@ interface WebCommandMetadata {
     apiUrl: string
 }
 
-interface ContinuationCommand {
+export interface ContinuationCommand {
     token: string
     request: string
 }

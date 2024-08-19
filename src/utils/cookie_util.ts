@@ -85,6 +85,12 @@ export class CookieJar{
         this.#jar = non_expired_cookies;
         return this.#jar;
     }
+    getCookie(cookie_name: string): Cookie|undefined {
+        const cookies = this.getCookies();
+        const index = cookies.findIndex(cookie => cookie.getData().name === cookie_name);
+        if(index === -1) return undefined;
+        else return cookies[index];
+    }
     toString(): string { return this.getCookies().map(cookie => cookie.toString()).join("; "); }
     merge(other_jar: CookieJar): void {
         const cookie_names = this.getCookies().map(cookie => cookie.getData().name); 
@@ -99,6 +105,10 @@ export class CookieJar{
     updateWithAxios(response: AxiosResponse){
         const set_cookies = response.headers['set-cookie'];
         if(set_cookies === undefined) return;
+        this.merge(CookieJar.fromStrings(set_cookies));
+    }
+    updateWithFetch(response: Response){
+        const set_cookies = response.headers.getSetCookie();
         this.merge(CookieJar.fromStrings(set_cookies));
     }
     static fromString(cstring: string): CookieJar {

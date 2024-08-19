@@ -1,8 +1,11 @@
+import { Channel } from "./Channel";
 import ContinuationItem from "./ContinuationItem";
+import { Playlist } from "./Playlist";
 import PostClientContext from "./PostClientContext";
+import { UnivseralChannel } from "./UniversalChannel";
 
 export type RunsText = { "text": string }[];
-interface Thumbnail{
+export interface Thumbnail{
     url: string,
     width: number,
     height: number
@@ -49,7 +52,7 @@ export interface Video {
     title: string,
     author: Author,
     thumbnails: Thumbnail[],
-    published_time_text: string,
+    published_time_text?: string,
     views_count_text: string,
     duration_thumbnail_overlay_text: string,
     is_watched: boolean,
@@ -65,6 +68,16 @@ export interface Short {
 export interface ReelShelf{
 
 }
+export interface MiniAlbum {
+    "title": string,
+    "album_name": string,
+    "thumbnail": Thumbnail[],
+    "playlist_endpoint": string,
+}
 export type ContentItem={"video": Video} | 
                         {"reel_shelf": ReelShelf} | 
-                        {"continuation": ContinuationItem};
+                        {"continuation": ContinuationItem} | 
+                        {"channel": Channel } |
+                        {"playlist": Playlist} |
+                        {"mini_albums": MiniAlbum[]}|
+                        {"univseral_channel": UnivseralChannel};

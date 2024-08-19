@@ -11,6 +11,7 @@ import { Collection } from "./types/Collection";
 import { InLibrary } from "./types/InLibrary";
 import { Credits } from "./types/Credits";
 import { ProfileData } from "./types/ProfileData";
+import { encodeParams } from "../utils/util";
 
 export namespace Spotify {
     interface ClientSession {
@@ -38,15 +39,6 @@ export namespace Spotify {
     export const valid_album_regex = /(https?:\/\/)open\.spotify\.com\/(album)\/.+/i
     export const valid_collection_regex = /(https?:\/\/)open\.spotify\.com\/(collection)\/.+/i
     export const valid_artist_regex = /(https?:\/\/)open\.spotify\.com\/artist\/.+/i
-
-    export function encodeParams(data: Record<string, any>){
-        const encoded_params = [];
-        for(const key of Object.keys(data)){
-            const param = data[key];
-            encoded_params.push(`${key}=${encodeURIComponent(typeof(param) === "object" ? JSON.stringify(param) : param )}`);
-        }
-        return encoded_params.join('&');
-    }
 
     export function getHeaders(client: (Client|undefined) = undefined, cookie_jar: (CookieJar|undefined) = undefined){
         const default_headers: any = {
@@ -416,7 +408,7 @@ export namespace Spotify {
         } catch (error) { return { "error": String(error) }; }
     }
 
-    export async function deleteTracksToLibrary(opts: {"uris": string[]} & Opts){
+    export async function deleteTracksFromLibrary(opts: {"uris": string[]} & Opts){
         try{
             if(opts.cookie_jar === undefined) throw "Undefined Cookies for Remove from Spotify Library";
             const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
@@ -434,7 +426,7 @@ export namespace Spotify {
         } catch (error) { return { "error": String(error) }; }
     }
 
-    export async function deleteTracksToPlaylist(opts: {
+    export async function deleteTracksFromPlaylist(opts: {
         "uids": string[],
         "playlist_uri": string,
         "move_type"?: "BOTTOM_OF_PLAYLIST"
@@ -455,6 +447,41 @@ export namespace Spotify {
                 "extensions": { "persistedQuery": { "version": 1, "sha256Hash": "47c69e71df79e3c80e4af7e7a9a727d82565bb20ae20dc820d6bc6f94def482d" } }
             };
             const result = ( await fetch(`https://api-partner.spotify.com/pathfinder/v1/query`, 
+                { 'method': "POST", headers, body: JSON.stringify(payload) }) );
+            return result;
+        } catch (error) { return { "error": String(error) }; }
+    }
+
+    export async function createPlaylist(opts: {
+        "playlist_name": string
+    } & Opts){
+        try{
+            if(opts.cookie_jar === undefined) throw "Undefined Cookies for Add To Spotify Library";
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+            
+            const payload = {
+                "ops": [ { "kind": 6, "updateListAttributes": { "newAttributes": { "values": { "name": opts.playlist_name, "formatAttributes": [], "pictureSize": [] }, "noValue": [] } } } ]
+            }
+            const result = ( await fetch(`https://spclient.wg.spotify.com/playlist/v2/playlist`, 
+                { 'method': "POST", headers, body: JSON.stringify(payload) }) );
+            return result;
+        } catch (error) { return { "error": String(error) }; }
+    }
+    export async function deletePlaylist(opts: {
+        "playlist_uri": string
+    } & Opts){
+        try{
+            if(opts.cookie_jar === undefined) throw "Undefined Cookies for Add To Spotify Library";
+            const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
+            if("error" in client) throw client.error;
+            const headers = getHeaders(client, opts.cookie_jar);
+            
+            const payload = {
+                "deltas": [ { "ops": [ { "kind": 3, "rem": { "items": [ { "uri": opts.playlist_uri } ], "itemsAsKey": true } } ], "info": { "source": { "client": 5 } } } ], "wantResultingRevisions": false, "wantSyncResult": false, "nonces": []
+            }
+            const result = ( await fetch(`https://spclient.wg.spotify.com/playlist/v2/playlist`, 
                 { 'method': "POST", headers, body: JSON.stringify(payload) }) );
             return result;
         } catch (error) { return { "error": String(error) }; }

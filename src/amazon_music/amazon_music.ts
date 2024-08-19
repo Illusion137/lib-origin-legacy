@@ -247,7 +247,7 @@ export namespace AmazonMusic {
             if (template_list_index === -1) throw "Unable to find TemplateListInterface.v1_0.CreateAndBindTemplateMethod";
             const amzn_track_data = (show_home.methods[template_list_index] as CreateAndBindMethod).template.widgets[0].items;
            
-            return amzn_track_data;
+            return {"title": (show_home.methods[template_list_index] as CreateAndBindMethod).template.headerImageAltText, "tracks": amzn_track_data};
         } catch (error) { return { "error": String(error) }; }
     }
 

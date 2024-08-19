@@ -1,5 +1,6 @@
 import * as sha1 from 'sha1-uint8array'
 import { CookieJar } from './utils/cookie_util';
+import { generateNewUID, decodeHex } from './utils/util';
 
 export namespace YouTube {
     type YouTubeType = "DESKTOP" | "MOBILE";
@@ -9,11 +10,11 @@ export namespace YouTube {
         return url.replace(idRegex, '');
     }
     export function getYouTubeSapisidHashAuth(SAPISID: string, ORIGIN = 'https://www.youtube.com'){
-        let timeStampSecondsStr = String(new Date().getTime()).slice(0,10);
-        let dataString = [timeStampSecondsStr, SAPISID, ORIGIN].join(' ');
-        let data = Uint8Array.from(Array.from(dataString).map(letter => letter.charCodeAt(0)));
-        let shaDigest = sha1.createHash().update(data).digest("hex");
-        let SAPISIDHASH = `SAPISIDHASH ${timeStampSecondsStr}_${shaDigest}`;
+        const time_stamp_seconds_str = String(new Date().getTime()).slice(0,10);
+        const data_string = [time_stamp_seconds_str, SAPISID, ORIGIN].join(' ');
+        const data = Uint8Array.from(Array.from(data_string).map(letter => letter.charCodeAt(0)));
+        const sha_digest = sha1.createHash().update(data).digest("hex");
+        const SAPISIDHASH = `SAPISIDHASH ${time_stamp_seconds_str}_${sha_digest}`;
         return SAPISIDHASH;
     }
     export function getAdSignalsInfoParams(){
@@ -43,16 +44,137 @@ export namespace YouTube {
             'upgrade-insecure-requests': '1', 
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36', 
             'x-client-data': 'CKS1yQEIh7bJAQiitskBCKmdygEI6NTKAQiQ+soBCJahywEI85jNAQiFoM0BCNy9zQEI38TNAQi5ys0BCMXRzQEI1NTNAQjM1s0BCOLWzQEI+cDUFRi60s0BGOuNpRc=',
-            'Cookies': cookie_jar?.toString()
+            'cookie': cookie_jar?.toString()
           };
     }
+    export async function getYouTubeInitialData(url = 'https://www.youtube.com/', jar: CookieJar){
+        try {
+            const innertubeApiKeyRegex = /"INNERTUBE_API_KEY": ?\"(.+?)\"/s;
+            const innertubeContextRegex = /INNERTUBE_CONTEXT": ?({.+?}})/s;
+            let config = {
+                method: 'GET',
+                maxBodyLength: Infinity,
+                headers: { 
+                'authority': 'www.youtube.com', 
+                'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7', 
+                'accept-language': 'en-US,en;q=0.9', 
+                'cache-control': 'max-age=0', 
+                'cookie': jar.toString(),  
+                'sec-ch-ua': '"Google Chrome";v="117", "Not;A=Brand";v="8", "Chromium";v="117"', 
+                'sec-ch-ua-arch': '"x86"', 
+                'sec-ch-ua-bitness': '"64"', 
+                'sec-ch-ua-full-version': '"117.0.5938.92"', 
+                'sec-ch-ua-full-version-list': '"Google Chrome";v="117.0.5938.92", "Not;A=Brand";v="8.0.0.0", "Chromium";v="117.0.5938.92"', 
+                'sec-ch-ua-mobile': '?0', 
+                'sec-ch-ua-model': '""', 
+                'sec-ch-ua-platform': '"Windows"', 
+                'sec-ch-ua-platform-version': '"15.0.0"', 
+                'sec-ch-ua-wow64': '?0', 
+                'sec-fetch-dest': 'document', 
+                'sec-fetch-mode': 'navigate', 
+                'sec-fetch-site': 'none', 
+                'sec-fetch-user': '?1', 
+                'service-worker-navigation-preload': 'true', 
+                'upgrade-insecure-requests': '1', 
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36', 
+                'x-client-data': 'CKS1yQEIh7bJAQiitskBCKmdygEI6NTKAQiQ+soBCJahywEI85jNAQiFoM0BCNy9zQEI38TNAQi5ys0BCMXRzQEI1NTNAQjM1s0BCOLWzQEI+cDUFRi60s0BGOuNpRc='
+                }
+            };
+
+            const response = await (await fetch(url, config)).text();
+
+            const INNERTUBE_API_KEY = innertubeApiKeyRegex.exec(response)?.[1] ?? "";
+            let INNERTUBE_CONTEXT = JSON.parse( ((innertubeContextRegex.exec(response)?.[1] ?? "").replace(/\n\s+/g,'')));
+            INNERTUBE_CONTEXT['adSignalsInfo'] = { 'params': getAdSignalsInfoParams() }
+            INNERTUBE_CONTEXT['request']['consistencyTokenJars'] = []
+            INNERTUBE_CONTEXT['request']['internalExperimentFlags'] = [ { "key": "force_enter_once_in_webview", "value": "true" } ];
+
+            let returnData = {
+                'INNERTUBE_API_KEY': INNERTUBE_API_KEY, 
+                'INNERTUBE_CONTEXT': INNERTUBE_CONTEXT, 
+                'data': response };
+            return returnData;
+        } catch (error) {
+            // console.log(error)
+            return null;
+        }
+    }
+    export async function getYoutubePlaylist(url: string) {
+        try{
+            let body;
+            let continue_ = true;
     
+            let videos: Track[] = []
+            
+            let initialData = await getYouTubeInitialData(url);
+            if(initialData === null){
+                throw new Error("YouTube Initial Data is null")
+            }
+    
+            const apikey = initialData.INNERTUBE_API_KEY
+            const clientKey = initialData.INNERTUBE_CONTEXT
+    
+            const dataRegex  = /var ytInitialData ?= ?\'(.+?)\';<\/script>/gs
+            const data2Regex  = /var ytInitialData ?= ?({.+?});<\/script>/gs
+            // const continuationTokenRegex = /continuationCommand.+?:\\x22(.+?)\\x22,/
+            const trackingParamsRegex = /"clickTrackingParams": ?"(.+?)"/s
+            const continuationTokenRegex = /continuationCommand.+?:"(.+?)",/s
+            const titleRegex = /<title>(.+?) - YouTube<\/title>/
+            // console.log(decodeHex( initialData.data))
+            let raw;
+            try {
+                raw = dataRegex.exec(initialData.data)[1]
+                raw = decodeHex(raw)
+            } catch (error) {
+                raw = data2Regex.exec(initialData.data)[1]
+            }
+    
+            let continuationToken;
+            try {
+                continuationToken = continuationTokenRegex.exec(initialData.data)[1]
+            } catch (error) {
+                continue_ = false;
+            }
+    
+            const title = titleRegex.exec(initialData.data)[1]
+    
+            let data = JSON.parse(raw.replaceAll(/\n\s+/g,''))
+            data.apikey = apikey
+    
+            let playlistVideoRenderers = [...JSON.stringify(data).matchAll(/({"playlistVideoRenderer.+?"}]}}})[^\]]/g)]
+            
+            for (let i = 0; i < playlistVideoRenderers.length-1; i++){
+                try {
+                    let parsedVideo = JSON.parse(playlistVideoRenderers[i][1])
+                    videos.push(new Track({
+                        'video_id': parsedVideo.playlistVideoRenderer.videoId,
+                        'video_name': parsedVideo.playlistVideoRenderer.title.runs[0].text,
+                        'video_creator': parsedVideo.playlistVideoRenderer.shortBylineText.runs[0].text,
+                        'video_duration': durationToInt(parsedVideo.playlistVideoRenderer.lengthText.accessibility.accessibilityData.label),
+                    }))
+                } catch (error) {
+                }
+            }
+            
+            if(continue_){
+                let continuedVideos = await getYoutubePlaylistContinuation(apikey, continuationToken, clientKey, url, trackingParamsRegex.exec(raw)[1]);
+                videos = videos.concat(continuedVideos);
+            }
+    
+            videos = videos.filter(item => item != undefined)
+        
+            return {'tracks': videos, 'title': title};
+        }
+        catch(error){
+            // console.log(error)
+            return {'tracks': [], 'title': null};
+        }
+    }
     async function getYoutubePlaylistContinuation(innertube_api_key: string, continuationKey: string, context: any, url: string, trackingParams: any){
         try {
-            let videos: Track[] = [];
-    
-            let postURL = `https://www.youtube.com/youtubei/v1/browse?key=${innertube_api_key}&prettyPrint=false`
-            let postData = {
+            const videos = [];
+            const post_url = `https://www.youtube.com/youtubei/v1/browse?key=${innertube_api_key}&prettyPrint=false`;
+            const post_data = {
                 "context": {
                     "client": {
                         "hl": context.client.hl,
@@ -184,38 +306,30 @@ export namespace YouTube {
         }
     }
 
-    export async function getAllYoutubePlaylistsFromAccount(){
+    export async function getAllYoutubePlaylistsFromAccount(jar: CookieJar){
         try {
-            let response = (await axios({'url': "https://www.youtube.com/feed/library", 'method': 'GET', 'headers': {
-                'Cookies': Prefs.prefs.external_services.youtube_cookies
-            }})).data
-            response = decodeHex(response);
+            const response = await (await fetch("https://www.youtube.com/feed/library", {'method': 'GET', 'headers': {
+                'cookie': jar.toString()
+            }})).text();
+            const decoded_response = decodeHex(response);
 
-            const ytInitialDataRegex = /var ytInitialData = (.+?);.+?<\/script>/gs;
-            let ytInitialDataStr = ytInitialDataRegex.exec(response)[1]
-            ytInitialDataStr = ytInitialDataStr.replaceAll(/\n\s+/g,'')
-            ytInitialDataStr = JSON.stringify(ytInitialDataStr)
-            ytInitialDataStr = ytInitialDataStr.slice(2, ytInitialDataStr.length - 2)
-            const ytInitialData = JSON.parse(decodeHex(ytInitialDataStr));
+            const yt_initial_data_regex = /var ytInitialData = (.+?);.+?<\/script>/gs;
+            const yt_initial_data_executed = yt_initial_data_regex.exec(decoded_response);
+            if(yt_initial_data_executed === null) throw "Couldn't Obtain yt_initial_data";
+            const yt_initial_data_string = yt_initial_data_executed[1].replace(/\n\s+/g,'');
+            let yt_initial_data_stringified = JSON.stringify(yt_initial_data_string);
+            yt_initial_data_stringified = yt_initial_data_stringified.slice(2, yt_initial_data_stringified.length - 2);
+            const yt_initial_data = JSON.parse(decodeHex(yt_initial_data_stringified));
             
-            let playlistNamesData = ytInitialData.contents.singleColumnBrowseResultsRenderer.tabs[0].tabRenderer.content.sectionListRenderer.contents[2].shelfRenderer.content.verticalListRenderer.items
-            // console.log(JSON.stringify(playlistNamesData))
-            let playlistNames = new Map<string, string>();
-            for(const playlistName of playlistNamesData){
+            const playlist_names_data = yt_initial_data.contents.singleColumnBrowseResultsRenderer.tabs[0].tabRenderer.content.sectionListRenderer.contents[2].shelfRenderer.content.verticalListRenderer.items
+            const playlist_names_map = new Map<string, string>();
+            for(const playlist_name_data of playlist_names_data){
                 try {
-                    playlistNames.set(playlistName.compactPlaylistRenderer.title.runs[0].text, playlistName.compactPlaylistRenderer.shareUrl)
-                } catch (error) {
-                    // console.log(error)
-                }
+                    playlist_names_map.set(playlist_name_data.compactPlaylistRenderer.title.runs[0].text, playlist_name_data.compactPlaylistRenderer.shareUrl)
+                } catch (error) {}
             }
-            if(playlistNames.size == 0 || playlistNames == undefined)
-                return undefined;
-            return playlistNames
-    
-        } catch (error) {
-            Alert.alert("Account Playlist Finder Error:", error)
-            return undefined;
-        }
+            return playlist_names_map;
+        } catch (error) { return { "error": String(error) }; }
     }
 
     export async function insertIntoYouTubePlaylist(playlistName: string, tracks: Track[]){
@@ -274,144 +388,150 @@ export namespace YouTube {
         }
     }
 
-    async function SearchYouTube(searchTerms, limit = 0, proxy = null){ //returns first video
-        if(searchTerms.trim === ''){
-            return {data: []}
+    function durationToInt(duration_string: string){
+        const split_duration = duration_string.split(',');
+        let duration = 0;
+        
+        for(let i = 0; i < split_duration.length; i++){
+            if(split_duration[i].includes('hour') || split_duration[i].includes('hours'))
+                duration += parseInt ( RegExp(/\d+/).exec(split_duration[i])?.[0] ?? "0" ) * 3600
+            else if(split_duration[i].includes('minute') || split_duration[i].includes('minutes'))
+                duration += parseInt ( RegExp(/\d+/).exec(split_duration[i])?.[0] ?? "0" ) * 60
+            else if(split_duration[i].includes('second') || split_duration[i].includes('seconds'))
+                duration += parseInt ( RegExp(/\d+/).exec(split_duration[i])?.[0] ?? "0" )
         }
-        let body;
+        return duration;
+    }
+    export function parseYTDuration(text_duration: string){
+        const text_duration_split = text_duration.split(':')
+        let j = 0;
+        let duration = 0;
+        for(let i = text_duration_split.length-1; i >= 0; i--)
+            duration += (parseInt(text_duration_split[i]) * Math.pow(60,j++));
+        return duration;
+    }
+
+    async function SearchYouTube(search_query: string, proxy = null){
         try{
-            let urlstring = 'https://m.youtube.com/results?videoEmbeddable=true&search_query=' + encodeURI(searchTerms)
+            if(search_query.trim() === ''){ return []; }
+            const search_url = 'https://m.youtube.com/results?videoEmbeddable=true&search_query=' + encodeURI(search_query);
     
-            const videos = []
-            
             const headers = {
                 'Access-Control-Allow-Origin' : '*',
-                'x-youtube-client-name': 1,
+                'x-youtube-client-name': '1',
                 'x-youtube-client-version': '2.20200911.04.00',
                 'User-Agent': 'Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.87 Mobile Safari/537.36'
             }
-            const dataRegex  = /var\ ytInitialData\ \=\ \'(.*)\'\;<\/script>/
-            const apiRegex  = /"innertubeApiKey":"(.*?)"/
-            if(proxy == null){
-                body = (await axios({'url':urlstring, 'headers': headers })).data
-            }
-            else{
-                body = (await axios({'url':urlstring, 'headers':headers, 'proxy': {
-                    protocol: 'http',
-                    host: proxy.ip,
-                    port: proxy.port,
-                }})).data
-            }
-            const raw = dataRegex.exec(body)?.[1] ?? '{}'
-            const apikey = apiRegex.exec(body)[1] ?? ''
+            const data_regex  = /var\ ytInitialData\ \=\ \'(.*)\'\;<\/script>/
+            const api_regex  = /"innertubeApiKey":"(.*?)"/
             
-            let ytInitialData = JSON.parse(decodeHex(raw).replaceAll(/\n\s+/g,'').replaceAll('\n',''))
+            const body: string = proxy === null ? await (await fetch(search_url, { 'headers': headers })).text() : "";
+            const raw = data_regex.exec(body)?.[1] ?? '{}';
+            const apikey = api_regex.exec(body)?.[1] ?? '';
+            
+            const yt_initial_data = JSON.parse(decodeHex(raw).replace(/\n\s+/g, '').replace(/\n/g,''));
          
             let itemSectionRendererIndex = 0;
     
-            for(const contentIndex in ytInitialData.contents.sectionListRenderer.contents as object[]){
-                if(ytInitialData.contents.sectionListRenderer.contents[contentIndex]['itemSectionRenderer'] != undefined){
+            for(const contentIndex in yt_initial_data.contents.sectionListRenderer.contents as object[]){
+                if(yt_initial_data.contents.sectionListRenderer.contents[contentIndex]['itemSectionRenderer'] != undefined){
                     itemSectionRendererIndex = contentIndex as unknown as number
                 }
             }
-            let contents = ytInitialData.contents.sectionListRenderer.contents[itemSectionRendererIndex].itemSectionRenderer.contents
-            ytInitialData.apikey = apikey
-            let apiKey = ytInitialData.apiKey
+            let contents = yt_initial_data.contents.sectionListRenderer.contents[itemSectionRendererIndex].itemSectionRenderer.contents
+            yt_initial_data.apikey = apikey;
+            let apiKey = yt_initial_data.apiKey;
             // let searchData = [...JSON.stringify(ytInitialData).matchAll(/"videoId":"(.+?)",.+?TimeStatusRenderer":.+?\[{"text":"(.+?)"}.+?accessibilityData":{"label":"([^{}]+) by ([^{}]+) [0-9,]+ views?.+?ago/g)]
     //"videoId":"(.+?)",.+?accessibilityData":{"label":"([^{}]+) by ([^{}]+) [0-9,]+ views?.+?ago.+?lengthText.+?simpleText":"(.+?)"
-            const pushData: Track[] = []
+            const videos: {
+                'video_id': string,
+                'video_name': string,
+                'video_creator': string,
+                'video_duration': number,
+            }[] = [];
             
             for (const video of contents) {
                 try {				
-                    let uid = GenerateNewUID(video.videoWithContextRenderer.headline.runs[0].text)
-                    pushData.push(new Track({
-                    'video_id': video.videoWithContextRenderer.videoId,
-                    'video_name': video.videoWithContextRenderer.headline.runs[0].text,
-                    'video_creator': video.videoWithContextRenderer.shortBylineText.runs[0].text,
-                    'video_duration': parseYTDuration(video.videoWithContextRenderer.lengthText.runs[0].text),
-                    'youtube': true,
-                    'uid': uid
-                    }))
-                    pushData[pushData.length - 1].artwork = getTrackArtworkRP(pushData[pushData.length - 1]);
-                } catch (error) {
-                }
+                    videos.push({
+                        'video_id': video.videoWithContextRenderer.videoId,
+                        'video_name': video.videoWithContextRenderer.headline.runs[0].text,
+                        'video_creator': video.videoWithContextRenderer.shortBylineText.runs[0].text,
+                        'video_duration': parseYTDuration(video.videoWithContextRenderer.lengthText.runs[0].text),
+                    })
+                } catch (error) {}
             }
-    
-            return {data: pushData}
+            return videos;
         }
-        catch(error){
-            console.log(error)
-            return {data: []}
-        }
+        catch(error) { return { "error": String(error) }; }
     }
 
-    export async function ContinueYouTubeSearch(continueData){
-        try {
-            let response = await axios.post(`https://www.youtube.com/youtubei/v1/search?key=${continueData.apiKey}`,{context : {
-                    client: {
-                    utcOffsetMinutes: 0,
-                    gl: continueData.options.gl, // DefaultGLobalLocation = 'US'
-                    hl: continueData.options.hl, // DefaultLanguage = 'en'
-                    clientName: continueData.options.clientName, // DefaultClientName = 'WEB'
-                    clientVersion: continueData.clientVersion, //Reference = '2.20221122.06.00'
-                    },
-                    user: {},
-                    request: {},
-                },
-                continuation: continueData.token
-            })
-            let innerJSON = response.data.onResponseReceivedCommands[0].appendContinuationItemsAction.continuationItems;
-            let newToken = innerJSON[1].continuationItemRenderer.continuationEndpoint.continuationCommand.token;
+    // export async function ContinueYouTubeSearch(continueData){
+    //     try {
+    //         let response = await axios.post(`https://www.youtube.com/youtubei/v1/search?key=${continueData.apiKey}`,{context : {
+    //                 client: {
+    //                 utcOffsetMinutes: 0,
+    //                 gl: continueData.options.gl, // DefaultGLobalLocation = 'US'
+    //                 hl: continueData.options.hl, // DefaultLanguage = 'en'
+    //                 clientName: continueData.options.clientName, // DefaultClientName = 'WEB'
+    //                 clientVersion: continueData.clientVersion, //Reference = '2.20221122.06.00'
+    //                 },
+    //                 user: {},
+    //                 request: {},
+    //             },
+    //             continuation: continueData.token
+    //         })
+    //         let innerJSON = response.data.onResponseReceivedCommands[0].appendContinuationItemsAction.continuationItems;
+    //         let newToken = innerJSON[1].continuationItemRenderer.continuationEndpoint.continuationCommand.token;
     
-            let data = []
-            for(const track of innerJSON[0].itemSectionRenderer.contents){
-                data.push({
-                    "video_duration": durationToInt(track.compactVideoRenderer.lengthText.runs[0].text.split(':')),
-                    "video_name": track.compactVideoRenderer.title.runs[0].text,
-                    "video_creator": track.compactVideoRenderer.longBylineText.runs[0].text,
-                    "video_id": track.compactVideoRenderer.videoId,
-                })
-            };
-            return {
-                token: newToken,
-                data: data
-            };
-        } catch (error) {
-        }
-    }
+    //         let data = []
+    //         for(const track of innerJSON[0].itemSectionRenderer.contents){
+    //             data.push({
+    //                 "video_duration": durationToInt(track.compactVideoRenderer.lengthText.runs[0].text.split(':')),
+    //                 "video_name": track.compactVideoRenderer.title.runs[0].text,
+    //                 "video_creator": track.compactVideoRenderer.longBylineText.runs[0].text,
+    //                 "video_id": track.compactVideoRenderer.videoId,
+    //             })
+    //         };
+    //         return {
+    //             token: newToken,
+    //             data: data
+    //         };
+    //     } catch (error) {
+    //     }
+    // }
 
-    export default async function getYouTubeMixTracks(video_id: string): Promise<Track[]> {
-        const youtube_mix_url = `https://www.youtube.com/watch?v=${video_id}&start_radio=1&list=RD${video_id}`
+    // export default async function getYouTubeMixTracks(video_id: string): Promise<Track[]> {
+    //     const youtube_mix_url = `https://www.youtube.com/watch?v=${video_id}&start_radio=1&list=RD${video_id}`
     
-        const response = (await axios({'url': youtube_mix_url, 'method': 'GET', 'headers': {
-            'Access-Control-Allow-Origin' : '*',
-            'x-youtube-client-name': 1,
-            'x-youtube-client-version': '2.20200911.04.00',
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.87 Mobile Safari/537.36',
-        }})).data;
-        const yt_initial_data = JSON.parse(((/ytInitialData ?= ?'(.+?})'/s).exec(decodeHex(response))[1]).replaceAll(/\n\s+/g,''))
+    //     const response = (await axios({'url': youtube_mix_url, 'method': 'GET', 'headers': {
+    //         'Access-Control-Allow-Origin' : '*',
+    //         'x-youtube-client-name': 1,
+    //         'x-youtube-client-version': '2.20200911.04.00',
+    //         'User-Agent': 'Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.87 Mobile Safari/537.36',
+    //     }})).data;
+    //     const yt_initial_data = JSON.parse(((/ytInitialData ?= ?'(.+?})'/s).exec(decodeHex(response))[1]).replaceAll(/\n\s+/g,''))
     
-        const tracks: Track[] = []
-        for(const track of yt_initial_data.contents.singleColumnWatchNextResults.playlist.playlist.contents){
-            try {
-                const title = track.playlistPanelVideoRenderer.title.runs[0].text;
-                const uid = GenerateNewUID(title);
-                const t = new Track({
-                    'video_id': track.playlistPanelVideoRenderer.videoId,
-                    'video_name': title,
-                    'video_creator': track.playlistPanelVideoRenderer.shortBylineText.runs[0].text,
-                    'video_duration': parseYTDuration(track.playlistPanelVideoRenderer.lengthText.runs[0].text),
-                    'youtube': true,
-                    'uid': uid,
-                })
-                t['successful'] = false;
-                t['added'] = false;
-                tracks.push(t);
-            } catch (error) {
-                console.log(error)
-            }
-        }
-        tracks.splice(0,1);
-        return tracks;
-    }
+    //     const tracks: Track[] = []
+    //     for(const track of yt_initial_data.contents.singleColumnWatchNextResults.playlist.playlist.contents){
+    //         try {
+    //             const title = track.playlistPanelVideoRenderer.title.runs[0].text;
+    //             const uid = GenerateNewUID(title);
+    //             const t = new Track({
+    //                 'video_id': track.playlistPanelVideoRenderer.videoId,
+    //                 'video_name': title,
+    //                 'video_creator': track.playlistPanelVideoRenderer.shortBylineText.runs[0].text,
+    //                 'video_duration': parseYTDuration(track.playlistPanelVideoRenderer.lengthText.runs[0].text),
+    //                 'youtube': true,
+    //                 'uid': uid,
+    //             })
+    //             t['successful'] = false;
+    //             t['added'] = false;
+    //             tracks.push(t);
+    //         } catch (error) {
+    //             console.log(error)
+    //         }
+    //     }
+    //     tracks.splice(0,1);
+    //     return tracks;
+    // }
 }
