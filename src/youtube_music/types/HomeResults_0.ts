@@ -1,18 +1,75 @@
 export interface HomeResults_0 {
-    contents: Content[]
+    responseContext: ResponseContext
+    contents: Contents
+    trackingParams: string
+    maxAgeStoreSeconds: number
+    background: Background2
+}
+
+export interface ResponseContext {
+    serviceTrackingParams: ServiceTrackingParam[]
+    maxAgeSeconds: number
+}
+
+export interface ServiceTrackingParam {
+    service: string
+    params: Param[]
+}
+
+export interface Param {
+    key: string
+    value: string
+}
+
+export interface Contents {
+    singleColumnBrowseResultsRenderer: SingleColumnBrowseResultsRenderer
+}
+
+export interface SingleColumnBrowseResultsRenderer {
+    tabs: Tab[]
+}
+
+export interface Tab {
+    tabRenderer: TabRenderer
+}
+
+export interface TabRenderer {
+    endpoint: Endpoint
+    title: string
+    selected: boolean
+    content: Content
+    icon: Icon7
+    tabIdentifier: string
+    trackingParams: string
+}
+
+export interface Endpoint {
+    clickTrackingParams: string
+    browseEndpoint: BrowseEndpoint
+}
+
+export interface BrowseEndpoint {
+    browseId: string
+}
+
+export interface Content {
+    sectionListRenderer: SectionListRenderer
+}
+
+export interface SectionListRenderer {
+    contents: Content2[]
     continuations: Continuation[]
     trackingParams: string
     header: Header2
 }
 
-export interface Content {
-    musicCarouselShelfRenderer?: MusicCarouselShelfRenderer
-    musicTastebuilderShelfRenderer?: MusicTastebuilderShelfRenderer
+export interface Content2 {
+    musicCarouselShelfRenderer: MusicCarouselShelfRenderer
 }
 
 export interface MusicCarouselShelfRenderer {
     header: Header
-    contents: Content2[]
+    contents: Content3[]
     trackingParams: string
     itemSize: string
     numItemsPerColumn?: string
@@ -24,11 +81,12 @@ export interface Header {
 
 export interface MusicCarouselShelfBasicHeaderRenderer {
     title: Title
-    strapline: Strapline
     accessibilityData: AccessibilityData
     headerStyle: string
-    moreContentButton?: MoreContentButton
+    moreContentButton: MoreContentButton
     trackingParams: string
+    strapline?: Strapline
+    thumbnail?: Thumbnail
 }
 
 export interface Title {
@@ -37,14 +95,16 @@ export interface Title {
 
 export interface Run {
     text: string
+    navigationEndpoint?: NavigationEndpoint
 }
 
-export interface Strapline {
-    runs: Run2[]
+export interface NavigationEndpoint {
+    clickTrackingParams: string
+    browseEndpoint: BrowseEndpoint2
 }
 
-export interface Run2 {
-    text: string
+export interface BrowseEndpoint2 {
+    browseId: string
 }
 
 export interface AccessibilityData {
@@ -62,22 +122,27 @@ export interface MoreContentButton {
 export interface ButtonRenderer {
     style: string
     text: Text
-    navigationEndpoint: NavigationEndpoint
+    navigationEndpoint: NavigationEndpoint2
     trackingParams: string
     accessibilityData: AccessibilityData3
 }
 
 export interface Text {
-    runs: Run3[]
+    runs: Run2[]
 }
 
-export interface Run3 {
+export interface Run2 {
     text: string
 }
 
-export interface NavigationEndpoint {
+export interface NavigationEndpoint2 {
     clickTrackingParams: string
-    watchPlaylistEndpoint: WatchPlaylistEndpoint
+    browseEndpoint?: BrowseEndpoint3
+    watchPlaylistEndpoint?: WatchPlaylistEndpoint
+}
+
+export interface BrowseEndpoint3 {
+    browseId: string
 }
 
 export interface WatchPlaylistEndpoint {
@@ -93,21 +158,12 @@ export interface AccessibilityData4 {
     label: string
 }
 
-export interface Content2 {
-    musicResponsiveListItemRenderer?: MusicResponsiveListItemRenderer
-    musicTwoRowItemRenderer?: MusicTwoRowItemRenderer
+export interface Strapline {
+    runs: Run3[]
 }
 
-export interface MusicResponsiveListItemRenderer {
-    trackingParams: string
-    thumbnail: Thumbnail
-    flexColumns: FlexColumn[]
-    menu: Menu
-    playlistItemData: PlaylistItemData
-    flexColumnDisplayStyle: string
-    navigationEndpoint: NavigationEndpoint6
-    itemHeight: string
-    badges?: Badge[]
+export interface Run3 {
+    text: string
 }
 
 export interface Thumbnail {
@@ -119,6 +175,9 @@ export interface MusicThumbnailRenderer {
     thumbnailCrop: string
     thumbnailScale: string
     trackingParams: string
+    accessibilityData: AccessibilityData5
+    onTap: OnTap
+    targetId: string
 }
 
 export interface Thumbnail2 {
@@ -131,27 +190,124 @@ export interface Thumbnail3 {
     height: number
 }
 
-export interface FlexColumn {
-    musicResponsiveListItemFlexColumnRenderer: MusicResponsiveListItemFlexColumnRenderer
+export interface AccessibilityData5 {
+    accessibilityData: AccessibilityData6
 }
 
-export interface MusicResponsiveListItemFlexColumnRenderer {
-    text: Text2
-    displayPriority: string
+export interface AccessibilityData6 {
+    label: string
 }
 
-export interface Text2 {
-    runs?: Run4[]
+export interface OnTap {
+    clickTrackingParams: string
+    browseEndpoint: BrowseEndpoint4
+}
+
+export interface BrowseEndpoint4 {
+    browseId: string
+    browseEndpointContextSupportedConfigs: BrowseEndpointContextSupportedConfigs
+}
+
+export interface BrowseEndpointContextSupportedConfigs {
+    browseEndpointContextMusicConfig: BrowseEndpointContextMusicConfig
+}
+
+export interface BrowseEndpointContextMusicConfig {
+    pageType: string
+}
+
+export interface Content3 {
+    musicTwoRowItemRenderer?: MusicTwoRowItemRenderer
+    musicResponsiveListItemRenderer?: MusicResponsiveListItemRenderer
+}
+
+export interface MusicTwoRowItemRenderer {
+    thumbnailRenderer: ThumbnailRenderer
+    aspectRatio: string
+    title: Title2
+    subtitle: Subtitle
+    navigationEndpoint: NavigationEndpoint4
+    trackingParams: string
+    menu: Menu
+    thumbnailOverlay?: ThumbnailOverlay
+    subtitleBadges?: SubtitleBadge[]
+}
+
+export interface ThumbnailRenderer {
+    musicThumbnailRenderer: MusicThumbnailRenderer2
+}
+
+export interface MusicThumbnailRenderer2 {
+    thumbnail: Thumbnail4
+    thumbnailCrop: string
+    thumbnailScale: string
+    trackingParams: string
+}
+
+export interface Thumbnail4 {
+    thumbnails: Thumbnail5[]
+}
+
+export interface Thumbnail5 {
+    url: string
+    width: number
+    height: number
+}
+
+export interface Title2 {
+    runs: Run4[]
 }
 
 export interface Run4 {
     text: string
-    navigationEndpoint?: NavigationEndpoint2
+    navigationEndpoint?: NavigationEndpoint3
 }
 
-export interface NavigationEndpoint2 {
+export interface NavigationEndpoint3 {
     clickTrackingParams: string
-    watchEndpoint: WatchEndpoint
+    browseEndpoint: BrowseEndpoint5
+}
+
+export interface BrowseEndpoint5 {
+    browseId: string
+    browseEndpointContextSupportedConfigs: BrowseEndpointContextSupportedConfigs2
+    params?: string
+}
+
+export interface BrowseEndpointContextSupportedConfigs2 {
+    browseEndpointContextMusicConfig: BrowseEndpointContextMusicConfig2
+}
+
+export interface BrowseEndpointContextMusicConfig2 {
+    pageType: string
+}
+
+export interface Subtitle {
+    runs: Run5[]
+}
+
+export interface Run5 {
+    text: string
+}
+
+export interface NavigationEndpoint4 {
+    clickTrackingParams: string
+    browseEndpoint?: BrowseEndpoint6
+    watchEndpoint?: WatchEndpoint
+}
+
+export interface BrowseEndpoint6 {
+    browseId: string
+    browseEndpointContextSupportedConfigs: BrowseEndpointContextSupportedConfigs3
+    params?: string
+}
+
+export interface BrowseEndpointContextSupportedConfigs3 {
+    browseEndpointContextMusicConfig: BrowseEndpointContextMusicConfig3
+}
+
+export interface BrowseEndpointContextMusicConfig3 {
+    pageType: string
 }
 
 export interface WatchEndpoint {
@@ -195,65 +351,13 @@ export interface Item {
 }
 
 export interface MenuNavigationItemRenderer {
-    text: Text3
+    text: Text2
     icon: Icon
-    navigationEndpoint: NavigationEndpoint3
+    navigationEndpoint: NavigationEndpoint5
     trackingParams: string
 }
 
-export interface Text3 {
-    runs: Run5[]
-}
-
-export interface Run5 {
-    text: string
-}
-
-export interface Icon {
-    iconType: string
-}
-
-export interface NavigationEndpoint3 {
-    clickTrackingParams: string
-    shareEntityEndpoint?: ShareEntityEndpoint
-    browseEndpoint?: BrowseEndpoint
-    modalEndpoint?: ModalEndpoint
-    watchEndpoint?: WatchEndpoint2
-}
-
-export interface ShareEntityEndpoint {
-    serializedShareEntity: string
-    sharePanelType: string
-}
-
-export interface BrowseEndpoint {
-    browseId: string
-    browseEndpointContextSupportedConfigs: BrowseEndpointContextSupportedConfigs
-}
-
-export interface BrowseEndpointContextSupportedConfigs {
-    browseEndpointContextMusicConfig: BrowseEndpointContextMusicConfig
-}
-
-export interface BrowseEndpointContextMusicConfig {
-    pageType: string
-}
-
-export interface ModalEndpoint {
-    modal: Modal
-}
-
-export interface Modal {
-    modalWithTitleAndButtonRenderer: ModalWithTitleAndButtonRenderer
-}
-
-export interface ModalWithTitleAndButtonRenderer {
-    title: Title2
-    content: Content3
-    button: Button
-}
-
-export interface Title2 {
+export interface Text2 {
     runs: Run6[]
 }
 
@@ -261,41 +365,42 @@ export interface Run6 {
     text: string
 }
 
-export interface Content3 {
-    runs: Run7[]
+export interface Icon {
+    iconType: string
 }
 
-export interface Run7 {
-    text: string
-}
-
-export interface Button {
-    buttonRenderer: ButtonRenderer2
-}
-
-export interface ButtonRenderer2 {
-    style: string
-    isDisabled: boolean
-    text: Text4
-    navigationEndpoint: NavigationEndpoint4
-    trackingParams: string
-}
-
-export interface Text4 {
-    runs: Run8[]
-}
-
-export interface Run8 {
-    text: string
-}
-
-export interface NavigationEndpoint4 {
+export interface NavigationEndpoint5 {
     clickTrackingParams: string
-    signInEndpoint: SignInEndpoint
+    shareEntityEndpoint?: ShareEntityEndpoint
+    browseEndpoint?: BrowseEndpoint7
+    addToPlaylistEndpoint?: AddToPlaylistEndpoint
+    watchEndpoint?: WatchEndpoint2
+    watchPlaylistEndpoint?: WatchPlaylistEndpoint2
+    confirmDialogEndpoint?: ConfirmDialogEndpoint
+    playlistEditorEndpoint?: PlaylistEditorEndpoint
 }
 
-export interface SignInEndpoint {
-    hack: boolean
+export interface ShareEntityEndpoint {
+    serializedShareEntity: string
+    sharePanelType: string
+}
+
+export interface BrowseEndpoint7 {
+    browseId: string
+    browseEndpointContextSupportedConfigs: BrowseEndpointContextSupportedConfigs4
+}
+
+export interface BrowseEndpointContextSupportedConfigs4 {
+    browseEndpointContextMusicConfig: BrowseEndpointContextMusicConfig4
+}
+
+export interface BrowseEndpointContextMusicConfig4 {
+    pageType: string
+}
+
+export interface AddToPlaylistEndpoint {
+    playlistId?: string
+    videoId?: string
 }
 
 export interface WatchEndpoint2 {
@@ -322,14 +427,57 @@ export interface WatchEndpointMusicConfig2 {
     musicVideoType: string
 }
 
-export interface MenuServiceItemRenderer {
-    text: Text5
-    icon: Icon2
+export interface WatchPlaylistEndpoint2 {
+    playlistId: string
+    params: string
+}
+
+export interface ConfirmDialogEndpoint {
+    content: Content4
+}
+
+export interface Content4 {
+    confirmDialogRenderer: ConfirmDialogRenderer
+}
+
+export interface ConfirmDialogRenderer {
+    title: Title3
+    trackingParams: string
+    dialogMessages: DialogMessage[]
+    confirmButton: ConfirmButton
+    cancelButton: CancelButton
+}
+
+export interface Title3 {
+    runs: Run7[]
+}
+
+export interface Run7 {
+    text: string
+}
+
+export interface DialogMessage {
+    runs: Run8[]
+}
+
+export interface Run8 {
+    text: string
+}
+
+export interface ConfirmButton {
+    buttonRenderer: ButtonRenderer2
+}
+
+export interface ButtonRenderer2 {
+    style: string
+    size: string
+    isDisabled: boolean
+    text: Text3
     serviceEndpoint: ServiceEndpoint
     trackingParams: string
 }
 
-export interface Text5 {
+export interface Text3 {
     runs: Run9[]
 }
 
@@ -337,11 +485,59 @@ export interface Run9 {
     text: string
 }
 
+export interface ServiceEndpoint {
+    clickTrackingParams: string
+    deletePlaylistEndpoint: DeletePlaylistEndpoint
+}
+
+export interface DeletePlaylistEndpoint {
+    playlistId: string
+}
+
+export interface CancelButton {
+    buttonRenderer: ButtonRenderer3
+}
+
+export interface ButtonRenderer3 {
+    style: string
+    size: string
+    isDisabled: boolean
+    text: Text4
+    trackingParams: string
+}
+
+export interface Text4 {
+    runs: Run10[]
+}
+
+export interface Run10 {
+    text: string
+}
+
+export interface PlaylistEditorEndpoint {
+    playlistId: string
+}
+
+export interface MenuServiceItemRenderer {
+    text: Text5
+    icon: Icon2
+    serviceEndpoint: ServiceEndpoint2
+    trackingParams: string
+}
+
+export interface Text5 {
+    runs: Run11[]
+}
+
+export interface Run11 {
+    text: string
+}
+
 export interface Icon2 {
     iconType: string
 }
 
-export interface ServiceEndpoint {
+export interface ServiceEndpoint2 {
     clickTrackingParams: string
     queueAddEndpoint: QueueAddEndpoint
 }
@@ -353,8 +549,9 @@ export interface QueueAddEndpoint {
 }
 
 export interface QueueTarget {
-    videoId: string
+    videoId?: string
     onEmptyQueue: OnEmptyQueue
+    playlistId?: string
 }
 
 export interface OnEmptyQueue {
@@ -363,7 +560,8 @@ export interface OnEmptyQueue {
 }
 
 export interface WatchEndpoint3 {
-    videoId: string
+    videoId?: string
+    playlistId?: string
 }
 
 export interface Command {
@@ -385,10 +583,10 @@ export interface NotificationTextRenderer {
 }
 
 export interface SuccessResponseText {
-    runs: Run10[]
+    runs: Run12[]
 }
 
-export interface Run10 {
+export interface Run12 {
     text: string
 }
 
@@ -398,15 +596,15 @@ export interface ToggleMenuServiceItemRenderer {
     defaultServiceEndpoint: DefaultServiceEndpoint
     toggledText: ToggledText
     toggledIcon: ToggledIcon
+    toggledServiceEndpoint: ToggledServiceEndpoint
     trackingParams: string
-    toggledServiceEndpoint?: ToggledServiceEndpoint
 }
 
 export interface DefaultText {
-    runs: Run11[]
+    runs: Run13[]
 }
 
-export interface Run11 {
+export interface Run13 {
     text: string
 }
 
@@ -416,73 +614,46 @@ export interface DefaultIcon {
 
 export interface DefaultServiceEndpoint {
     clickTrackingParams: string
-    modalEndpoint: ModalEndpoint2
+    likeEndpoint?: LikeEndpoint
+    feedbackEndpoint?: FeedbackEndpoint
+    subscribeEndpoint?: SubscribeEndpoint
 }
 
-export interface ModalEndpoint2 {
-    modal: Modal2
+export interface LikeEndpoint {
+    status: string
+    target: Target
+    actions?: Action[]
 }
 
-export interface Modal2 {
-    modalWithTitleAndButtonRenderer: ModalWithTitleAndButtonRenderer2
+export interface Target {
+    playlistId?: string
+    videoId?: string
 }
 
-export interface ModalWithTitleAndButtonRenderer2 {
-    title: Title3
-    content: Content4
-    button: Button2
+export interface Action {
+    clickTrackingParams: string
+    musicLibraryStatusUpdateCommand: MusicLibraryStatusUpdateCommand
 }
 
-export interface Title3 {
-    runs: Run12[]
+export interface MusicLibraryStatusUpdateCommand {
+    libraryStatus: string
+    addToLibraryFeedbackToken: string
 }
 
-export interface Run12 {
-    text: string
+export interface FeedbackEndpoint {
+    feedbackToken: string
 }
 
-export interface Content4 {
-    runs: Run13[]
+export interface SubscribeEndpoint {
+    channelIds: string[]
+    params: string
 }
 
-export interface Run13 {
-    text: string
-}
-
-export interface Button2 {
-    buttonRenderer: ButtonRenderer3
-}
-
-export interface ButtonRenderer3 {
-    style: string
-    isDisabled: boolean
-    text: Text6
-    navigationEndpoint: NavigationEndpoint5
-    trackingParams: string
-}
-
-export interface Text6 {
+export interface ToggledText {
     runs: Run14[]
 }
 
 export interface Run14 {
-    text: string
-}
-
-export interface NavigationEndpoint5 {
-    clickTrackingParams: string
-    signInEndpoint: SignInEndpoint2
-}
-
-export interface SignInEndpoint2 {
-    hack: boolean
-}
-
-export interface ToggledText {
-    runs: Run15[]
-}
-
-export interface Run15 {
     text: string
 }
 
@@ -492,448 +663,46 @@ export interface ToggledIcon {
 
 export interface ToggledServiceEndpoint {
     clickTrackingParams: string
-    feedbackEndpoint: FeedbackEndpoint
+    likeEndpoint?: LikeEndpoint2
+    feedbackEndpoint?: FeedbackEndpoint2
+    unsubscribeEndpoint?: UnsubscribeEndpoint
 }
 
-export interface FeedbackEndpoint {
+export interface LikeEndpoint2 {
+    status: string
+    target: Target2
+    actions?: Action2[]
+}
+
+export interface Target2 {
+    playlistId?: string
+    videoId?: string
+}
+
+export interface Action2 {
+    clickTrackingParams: string
+    musicLibraryStatusUpdateCommand: MusicLibraryStatusUpdateCommand2
+}
+
+export interface MusicLibraryStatusUpdateCommand2 {
+    libraryStatus: string
+    addToLibraryFeedbackToken: string
+}
+
+export interface FeedbackEndpoint2 {
     feedbackToken: string
 }
 
+export interface UnsubscribeEndpoint {
+    channelIds: string[]
+    params: string
+}
+
 export interface Accessibility {
-    accessibilityData: AccessibilityData5
-}
-
-export interface AccessibilityData5 {
-    label: string
-}
-
-export interface PlaylistItemData {
-    videoId: string
-}
-
-export interface NavigationEndpoint6 {
-    clickTrackingParams: string
-    watchEndpoint: WatchEndpoint4
-}
-
-export interface WatchEndpoint4 {
-    videoId: string
-    watchEndpointMusicSupportedConfigs: WatchEndpointMusicSupportedConfigs3
-}
-
-export interface WatchEndpointMusicSupportedConfigs3 {
-    watchEndpointMusicConfig: WatchEndpointMusicConfig3
-}
-
-export interface WatchEndpointMusicConfig3 {
-    musicVideoType: string
-}
-
-export interface Badge {
-    musicInlineBadgeRenderer: MusicInlineBadgeRenderer
-}
-
-export interface MusicInlineBadgeRenderer {
-    trackingParams: string
-    icon: Icon3
-    accessibilityData: AccessibilityData6
-}
-
-export interface Icon3 {
-    iconType: string
-}
-
-export interface AccessibilityData6 {
     accessibilityData: AccessibilityData7
 }
 
 export interface AccessibilityData7 {
-    label: string
-}
-
-export interface MusicTwoRowItemRenderer {
-    thumbnailRenderer: ThumbnailRenderer
-    aspectRatio: string
-    title: Title4
-    subtitle: Subtitle
-    navigationEndpoint: NavigationEndpoint8
-    trackingParams: string
-    menu: Menu2
-    thumbnailOverlay: ThumbnailOverlay
-}
-
-export interface ThumbnailRenderer {
-    musicThumbnailRenderer: MusicThumbnailRenderer2
-}
-
-export interface MusicThumbnailRenderer2 {
-    thumbnail: Thumbnail4
-    thumbnailCrop: string
-    thumbnailScale: string
-    trackingParams: string
-}
-
-export interface Thumbnail4 {
-    thumbnails: Thumbnail5[]
-}
-
-export interface Thumbnail5 {
-    url: string
-    width: number
-    height: number
-}
-
-export interface Title4 {
-    runs: Run16[]
-}
-
-export interface Run16 {
-    text: string
-    navigationEndpoint: NavigationEndpoint7
-}
-
-export interface NavigationEndpoint7 {
-    clickTrackingParams: string
-    browseEndpoint: BrowseEndpoint2
-}
-
-export interface BrowseEndpoint2 {
-    browseId: string
-    browseEndpointContextSupportedConfigs: BrowseEndpointContextSupportedConfigs2
-}
-
-export interface BrowseEndpointContextSupportedConfigs2 {
-    browseEndpointContextMusicConfig: BrowseEndpointContextMusicConfig2
-}
-
-export interface BrowseEndpointContextMusicConfig2 {
-    pageType: string
-}
-
-export interface Subtitle {
-    runs: Run17[]
-}
-
-export interface Run17 {
-    text: string
-}
-
-export interface NavigationEndpoint8 {
-    clickTrackingParams: string
-    browseEndpoint: BrowseEndpoint3
-}
-
-export interface BrowseEndpoint3 {
-    browseId: string
-    browseEndpointContextSupportedConfigs: BrowseEndpointContextSupportedConfigs3
-}
-
-export interface BrowseEndpointContextSupportedConfigs3 {
-    browseEndpointContextMusicConfig: BrowseEndpointContextMusicConfig3
-}
-
-export interface BrowseEndpointContextMusicConfig3 {
-    pageType: string
-}
-
-export interface Menu2 {
-    menuRenderer: MenuRenderer2
-}
-
-export interface MenuRenderer2 {
-    items: Item3[]
-    trackingParams: string
-    accessibility: Accessibility2
-}
-
-export interface Item3 {
-    menuNavigationItemRenderer?: MenuNavigationItemRenderer2
-    menuServiceItemRenderer?: MenuServiceItemRenderer2
-    toggleMenuServiceItemRenderer?: ToggleMenuServiceItemRenderer2
-}
-
-export interface MenuNavigationItemRenderer2 {
-    text: Text7
-    icon: Icon4
-    navigationEndpoint: NavigationEndpoint9
-    trackingParams: string
-}
-
-export interface Text7 {
-    runs: Run18[]
-}
-
-export interface Run18 {
-    text: string
-}
-
-export interface Icon4 {
-    iconType: string
-}
-
-export interface NavigationEndpoint9 {
-    clickTrackingParams: string
-    shareEntityEndpoint?: ShareEntityEndpoint2
-    modalEndpoint?: ModalEndpoint3
-    watchPlaylistEndpoint?: WatchPlaylistEndpoint2
-}
-
-export interface ShareEntityEndpoint2 {
-    serializedShareEntity: string
-    sharePanelType: string
-}
-
-export interface ModalEndpoint3 {
-    modal: Modal3
-}
-
-export interface Modal3 {
-    modalWithTitleAndButtonRenderer: ModalWithTitleAndButtonRenderer3
-}
-
-export interface ModalWithTitleAndButtonRenderer3 {
-    title: Title5
-    content: Content5
-    button: Button3
-}
-
-export interface Title5 {
-    runs: Run19[]
-}
-
-export interface Run19 {
-    text: string
-}
-
-export interface Content5 {
-    runs: Run20[]
-}
-
-export interface Run20 {
-    text: string
-}
-
-export interface Button3 {
-    buttonRenderer: ButtonRenderer4
-}
-
-export interface ButtonRenderer4 {
-    style: string
-    isDisabled: boolean
-    text: Text8
-    navigationEndpoint: NavigationEndpoint10
-    trackingParams: string
-}
-
-export interface Text8 {
-    runs: Run21[]
-}
-
-export interface Run21 {
-    text: string
-}
-
-export interface NavigationEndpoint10 {
-    clickTrackingParams: string
-    signInEndpoint: SignInEndpoint3
-}
-
-export interface SignInEndpoint3 {
-    hack: boolean
-}
-
-export interface WatchPlaylistEndpoint2 {
-    playlistId: string
-    params: string
-}
-
-export interface MenuServiceItemRenderer2 {
-    text: Text9
-    icon: Icon5
-    serviceEndpoint: ServiceEndpoint2
-    trackingParams: string
-}
-
-export interface Text9 {
-    runs: Run22[]
-}
-
-export interface Run22 {
-    text: string
-}
-
-export interface Icon5 {
-    iconType: string
-}
-
-export interface ServiceEndpoint2 {
-    clickTrackingParams: string
-    queueAddEndpoint: QueueAddEndpoint2
-}
-
-export interface QueueAddEndpoint2 {
-    queueTarget: QueueTarget2
-    queueInsertPosition: string
-    commands: Command2[]
-}
-
-export interface QueueTarget2 {
-    playlistId: string
-    onEmptyQueue: OnEmptyQueue2
-}
-
-export interface OnEmptyQueue2 {
-    clickTrackingParams: string
-    watchEndpoint: WatchEndpoint5
-}
-
-export interface WatchEndpoint5 {
-    playlistId: string
-}
-
-export interface Command2 {
-    clickTrackingParams: string
-    addToToastAction: AddToToastAction2
-}
-
-export interface AddToToastAction2 {
-    item: Item4
-}
-
-export interface Item4 {
-    notificationTextRenderer: NotificationTextRenderer2
-}
-
-export interface NotificationTextRenderer2 {
-    successResponseText: SuccessResponseText2
-    trackingParams: string
-}
-
-export interface SuccessResponseText2 {
-    runs: Run23[]
-}
-
-export interface Run23 {
-    text: string
-}
-
-export interface ToggleMenuServiceItemRenderer2 {
-    defaultText: DefaultText2
-    defaultIcon: DefaultIcon2
-    defaultServiceEndpoint: DefaultServiceEndpoint2
-    toggledText: ToggledText2
-    toggledIcon: ToggledIcon2
-    toggledServiceEndpoint: ToggledServiceEndpoint2
-    trackingParams: string
-}
-
-export interface DefaultText2 {
-    runs: Run24[]
-}
-
-export interface Run24 {
-    text: string
-}
-
-export interface DefaultIcon2 {
-    iconType: string
-}
-
-export interface DefaultServiceEndpoint2 {
-    clickTrackingParams: string
-    modalEndpoint: ModalEndpoint4
-}
-
-export interface ModalEndpoint4 {
-    modal: Modal4
-}
-
-export interface Modal4 {
-    modalWithTitleAndButtonRenderer: ModalWithTitleAndButtonRenderer4
-}
-
-export interface ModalWithTitleAndButtonRenderer4 {
-    title: Title6
-    content: Content6
-    button: Button4
-}
-
-export interface Title6 {
-    runs: Run25[]
-}
-
-export interface Run25 {
-    text: string
-}
-
-export interface Content6 {
-    runs: Run26[]
-}
-
-export interface Run26 {
-    text: string
-}
-
-export interface Button4 {
-    buttonRenderer: ButtonRenderer5
-}
-
-export interface ButtonRenderer5 {
-    style: string
-    isDisabled: boolean
-    text: Text10
-    navigationEndpoint: NavigationEndpoint11
-    trackingParams: string
-}
-
-export interface Text10 {
-    runs: Run27[]
-}
-
-export interface Run27 {
-    text: string
-}
-
-export interface NavigationEndpoint11 {
-    clickTrackingParams: string
-    signInEndpoint: SignInEndpoint4
-}
-
-export interface SignInEndpoint4 {
-    hack: boolean
-}
-
-export interface ToggledText2 {
-    runs: Run28[]
-}
-
-export interface Run28 {
-    text: string
-}
-
-export interface ToggledIcon2 {
-    iconType: string
-}
-
-export interface ToggledServiceEndpoint2 {
-    clickTrackingParams: string
-    likeEndpoint: LikeEndpoint
-}
-
-export interface LikeEndpoint {
-    status: string
-    target: Target
-}
-
-export interface Target {
-    playlistId: string
-}
-
-export interface Accessibility2 {
-    accessibilityData: AccessibilityData8
-}
-
-export interface AccessibilityData8 {
     label: string
 }
 
@@ -943,7 +712,7 @@ export interface ThumbnailOverlay {
 
 export interface MusicItemThumbnailOverlayRenderer {
     background: Background
-    content: Content7
+    content: Content5
     contentPosition: string
     displayStyle: string
 }
@@ -956,7 +725,7 @@ export interface VerticalGradient {
     gradientLayerColors: string[]
 }
 
-export interface Content7 {
+export interface Content5 {
     musicPlayButtonRenderer: MusicPlayButtonRenderer
 }
 
@@ -980,12 +749,37 @@ export interface MusicPlayButtonRenderer {
 
 export interface PlayNavigationEndpoint {
     clickTrackingParams: string
-    watchPlaylistEndpoint: WatchPlaylistEndpoint3
+    watchPlaylistEndpoint?: WatchPlaylistEndpoint3
+    watchEndpoint?: WatchEndpoint4
 }
 
 export interface WatchPlaylistEndpoint3 {
     playlistId: string
     params: string
+}
+
+export interface WatchEndpoint4 {
+    videoId: string
+    playlistId: string
+    params?: string
+    loggingContext: LoggingContext3
+    watchEndpointMusicSupportedConfigs: WatchEndpointMusicSupportedConfigs3
+}
+
+export interface LoggingContext3 {
+    vssLoggingContext: VssLoggingContext3
+}
+
+export interface VssLoggingContext3 {
+    serializedContextData: string
+}
+
+export interface WatchEndpointMusicSupportedConfigs3 {
+    watchEndpointMusicConfig: WatchEndpointMusicConfig3
+}
+
+export interface WatchEndpointMusicConfig3 {
+    musicVideoType: string
 }
 
 export interface PlayIcon {
@@ -1001,6 +795,14 @@ export interface PlayingIcon {
 }
 
 export interface AccessibilityPlayData {
+    accessibilityData: AccessibilityData8
+}
+
+export interface AccessibilityData8 {
+    label: string
+}
+
+export interface AccessibilityPauseData {
     accessibilityData: AccessibilityData9
 }
 
@@ -1008,29 +810,49 @@ export interface AccessibilityData9 {
     label: string
 }
 
-export interface AccessibilityPauseData {
+export interface SubtitleBadge {
+    musicInlineBadgeRenderer: MusicInlineBadgeRenderer
+}
+
+export interface MusicInlineBadgeRenderer {
+    trackingParams: string
+    icon: Icon3
     accessibilityData: AccessibilityData10
 }
 
+export interface Icon3 {
+    iconType: string
+}
+
 export interface AccessibilityData10 {
+    accessibilityData: AccessibilityData11
+}
+
+export interface AccessibilityData11 {
     label: string
 }
 
-export interface MusicTastebuilderShelfRenderer {
-    thumbnail: Thumbnail6
-    primaryText: PrimaryText
-    secondaryText: SecondaryText
-    actionButton: ActionButton
-    isVisible: boolean
+export interface MusicResponsiveListItemRenderer {
     trackingParams: string
+    thumbnail: Thumbnail6
+    flexColumns: FlexColumn[]
+    menu: Menu2
+    badges?: Badge[]
+    playlistItemData: PlaylistItemData
+    flexColumnDisplayStyle: string
+    navigationEndpoint: NavigationEndpoint8
+    itemHeight: string
 }
 
 export interface Thumbnail6 {
-    musicTastebuilderShelfThumbnailRenderer: MusicTastebuilderShelfThumbnailRenderer
+    musicThumbnailRenderer: MusicThumbnailRenderer3
 }
 
-export interface MusicTastebuilderShelfThumbnailRenderer {
+export interface MusicThumbnailRenderer3 {
     thumbnail: Thumbnail7
+    thumbnailCrop: string
+    thumbnailScale: string
+    trackingParams: string
 }
 
 export interface Thumbnail7 {
@@ -1043,103 +865,356 @@ export interface Thumbnail8 {
     height: number
 }
 
-export interface PrimaryText {
-    runs: Run29[]
+export interface FlexColumn {
+    musicResponsiveListItemFlexColumnRenderer: MusicResponsiveListItemFlexColumnRenderer
 }
 
-export interface Run29 {
+export interface MusicResponsiveListItemFlexColumnRenderer {
+    text: Text6
+    displayPriority: string
+}
+
+export interface Text6 {
+    runs: Run15[]
+}
+
+export interface Run15 {
     text: string
+    navigationEndpoint?: NavigationEndpoint6
 }
 
-export interface SecondaryText {
-    runs: Run30[]
+export interface NavigationEndpoint6 {
+    clickTrackingParams: string
+    watchEndpoint: WatchEndpoint5
 }
 
-export interface Run30 {
-    text: string
+export interface WatchEndpoint5 {
+    videoId: string
+    playlistId: string
+    params: string
+    loggingContext: LoggingContext4
+    watchEndpointMusicSupportedConfigs: WatchEndpointMusicSupportedConfigs4
 }
 
-export interface ActionButton {
-    buttonRenderer: ButtonRenderer6
+export interface LoggingContext4 {
+    vssLoggingContext: VssLoggingContext4
 }
 
-export interface ButtonRenderer6 {
-    style: string
-    text: Text11
-    navigationEndpoint: NavigationEndpoint12
+export interface VssLoggingContext4 {
+    serializedContextData: string
+}
+
+export interface WatchEndpointMusicSupportedConfigs4 {
+    watchEndpointMusicConfig: WatchEndpointMusicConfig4
+}
+
+export interface WatchEndpointMusicConfig4 {
+    musicVideoType: string
+}
+
+export interface Menu2 {
+    menuRenderer: MenuRenderer2
+}
+
+export interface MenuRenderer2 {
+    items: Item3[]
+    trackingParams: string
+    accessibility: Accessibility2
+}
+
+export interface Item3 {
+    menuNavigationItemRenderer?: MenuNavigationItemRenderer2
+    menuServiceItemRenderer?: MenuServiceItemRenderer2
+    toggleMenuServiceItemRenderer?: ToggleMenuServiceItemRenderer2
+}
+
+export interface MenuNavigationItemRenderer2 {
+    text: Text7
+    icon: Icon4
+    navigationEndpoint: NavigationEndpoint7
     trackingParams: string
 }
 
-export interface Text11 {
-    runs: Run31[]
+export interface Text7 {
+    runs: Run16[]
 }
 
-export interface Run31 {
+export interface Run16 {
     text: string
 }
 
-export interface NavigationEndpoint12 {
+export interface Icon4 {
+    iconType: string
+}
+
+export interface NavigationEndpoint7 {
     clickTrackingParams: string
-    modalEndpoint: ModalEndpoint5
+    shareEntityEndpoint?: ShareEntityEndpoint2
+    browseEndpoint?: BrowseEndpoint8
+    addToPlaylistEndpoint?: AddToPlaylistEndpoint2
+    watchEndpoint?: WatchEndpoint6
 }
 
-export interface ModalEndpoint5 {
-    modal: Modal5
+export interface ShareEntityEndpoint2 {
+    serializedShareEntity: string
+    sharePanelType: string
 }
 
-export interface Modal5 {
-    modalWithTitleAndButtonRenderer: ModalWithTitleAndButtonRenderer5
+export interface BrowseEndpoint8 {
+    browseId: string
+    browseEndpointContextSupportedConfigs: BrowseEndpointContextSupportedConfigs5
 }
 
-export interface ModalWithTitleAndButtonRenderer5 {
-    title: Title7
-    content: Content8
-    button: Button5
+export interface BrowseEndpointContextSupportedConfigs5 {
+    browseEndpointContextMusicConfig: BrowseEndpointContextMusicConfig5
 }
 
-export interface Title7 {
-    runs: Run32[]
+export interface BrowseEndpointContextMusicConfig5 {
+    pageType: string
 }
 
-export interface Run32 {
-    text: string
+export interface AddToPlaylistEndpoint2 {
+    videoId: string
 }
 
-export interface Content8 {
-    runs: Run33[]
+export interface WatchEndpoint6 {
+    videoId: string
+    playlistId: string
+    params: string
+    loggingContext: LoggingContext5
+    watchEndpointMusicSupportedConfigs: WatchEndpointMusicSupportedConfigs5
 }
 
-export interface Run33 {
-    text: string
+export interface LoggingContext5 {
+    vssLoggingContext: VssLoggingContext5
 }
 
-export interface Button5 {
-    buttonRenderer: ButtonRenderer7
+export interface VssLoggingContext5 {
+    serializedContextData: string
 }
 
-export interface ButtonRenderer7 {
-    style: string
-    isDisabled: boolean
-    text: Text12
-    navigationEndpoint: NavigationEndpoint13
+export interface WatchEndpointMusicSupportedConfigs5 {
+    watchEndpointMusicConfig: WatchEndpointMusicConfig5
+}
+
+export interface WatchEndpointMusicConfig5 {
+    musicVideoType: string
+}
+
+export interface MenuServiceItemRenderer2 {
+    text: Text8
+    icon: Icon5
+    serviceEndpoint: ServiceEndpoint3
     trackingParams: string
 }
 
-export interface Text12 {
-    runs: Run34[]
+export interface Text8 {
+    runs: Run17[]
 }
 
-export interface Run34 {
+export interface Run17 {
     text: string
 }
 
-export interface NavigationEndpoint13 {
-    clickTrackingParams: string
-    signInEndpoint: SignInEndpoint5
+export interface Icon5 {
+    iconType: string
 }
 
-export interface SignInEndpoint5 {
-    hack: boolean
+export interface ServiceEndpoint3 {
+    clickTrackingParams: string
+    queueAddEndpoint: QueueAddEndpoint2
+}
+
+export interface QueueAddEndpoint2 {
+    queueTarget: QueueTarget2
+    queueInsertPosition: string
+    commands: Command2[]
+}
+
+export interface QueueTarget2 {
+    videoId: string
+    onEmptyQueue: OnEmptyQueue2
+}
+
+export interface OnEmptyQueue2 {
+    clickTrackingParams: string
+    watchEndpoint: WatchEndpoint7
+}
+
+export interface WatchEndpoint7 {
+    videoId: string
+}
+
+export interface Command2 {
+    clickTrackingParams: string
+    addToToastAction: AddToToastAction2
+}
+
+export interface AddToToastAction2 {
+    item: Item4
+}
+
+export interface Item4 {
+    notificationTextRenderer: NotificationTextRenderer2
+}
+
+export interface NotificationTextRenderer2 {
+    successResponseText: SuccessResponseText2
+    trackingParams: string
+}
+
+export interface SuccessResponseText2 {
+    runs: Run18[]
+}
+
+export interface Run18 {
+    text: string
+}
+
+export interface ToggleMenuServiceItemRenderer2 {
+    defaultText: DefaultText2
+    defaultIcon: DefaultIcon2
+    defaultServiceEndpoint: DefaultServiceEndpoint2
+    toggledText: ToggledText2
+    toggledIcon: ToggledIcon2
+    toggledServiceEndpoint: ToggledServiceEndpoint2
+    trackingParams: string
+}
+
+export interface DefaultText2 {
+    runs: Run19[]
+}
+
+export interface Run19 {
+    text: string
+}
+
+export interface DefaultIcon2 {
+    iconType: string
+}
+
+export interface DefaultServiceEndpoint2 {
+    clickTrackingParams: string
+    likeEndpoint?: LikeEndpoint3
+    feedbackEndpoint?: FeedbackEndpoint3
+}
+
+export interface LikeEndpoint3 {
+    status: string
+    target: Target3
+    actions?: Action3[]
+}
+
+export interface Target3 {
+    videoId: string
+}
+
+export interface Action3 {
+    clickTrackingParams: string
+    musicLibraryStatusUpdateCommand: MusicLibraryStatusUpdateCommand3
+}
+
+export interface MusicLibraryStatusUpdateCommand3 {
+    libraryStatus: string
+    addToLibraryFeedbackToken: string
+}
+
+export interface FeedbackEndpoint3 {
+    feedbackToken: string
+}
+
+export interface ToggledText2 {
+    runs: Run20[]
+}
+
+export interface Run20 {
+    text: string
+}
+
+export interface ToggledIcon2 {
+    iconType: string
+}
+
+export interface ToggledServiceEndpoint2 {
+    clickTrackingParams: string
+    likeEndpoint?: LikeEndpoint4
+    feedbackEndpoint?: FeedbackEndpoint4
+}
+
+export interface LikeEndpoint4 {
+    status: string
+    target: Target4
+    actions?: Action4[]
+}
+
+export interface Target4 {
+    videoId: string
+}
+
+export interface Action4 {
+    clickTrackingParams: string
+    musicLibraryStatusUpdateCommand: MusicLibraryStatusUpdateCommand4
+}
+
+export interface MusicLibraryStatusUpdateCommand4 {
+    libraryStatus: string
+    addToLibraryFeedbackToken: string
+}
+
+export interface FeedbackEndpoint4 {
+    feedbackToken: string
+}
+
+export interface Accessibility2 {
+    accessibilityData: AccessibilityData12
+}
+
+export interface AccessibilityData12 {
+    label: string
+}
+
+export interface Badge {
+    musicInlineBadgeRenderer: MusicInlineBadgeRenderer2
+}
+
+export interface MusicInlineBadgeRenderer2 {
+    trackingParams: string
+    icon: Icon6
+    accessibilityData: AccessibilityData13
+}
+
+export interface Icon6 {
+    iconType: string
+}
+
+export interface AccessibilityData13 {
+    accessibilityData: AccessibilityData14
+}
+
+export interface AccessibilityData14 {
+    label: string
+}
+
+export interface PlaylistItemData {
+    videoId: string
+}
+
+export interface NavigationEndpoint8 {
+    clickTrackingParams: string
+    watchEndpoint: WatchEndpoint8
+}
+
+export interface WatchEndpoint8 {
+    videoId: string
+    watchEndpointMusicSupportedConfigs: WatchEndpointMusicSupportedConfigs6
+}
+
+export interface WatchEndpointMusicSupportedConfigs6 {
+    watchEndpointMusicConfig: WatchEndpointMusicConfig6
+}
+
+export interface WatchEndpointMusicConfig6 {
+    musicVideoType: string
 }
 
 export interface Continuation {
@@ -1167,8 +1242,8 @@ export interface Chip {
 
 export interface ChipCloudChipRenderer {
     style: Style
-    text: Text13
-    navigationEndpoint: NavigationEndpoint14
+    text: Text9
+    navigationEndpoint: NavigationEndpoint9
     trackingParams: string
     isSelected: boolean
     onDeselectedCommand: OnDeselectedCommand
@@ -1178,30 +1253,55 @@ export interface Style {
     styleType: string
 }
 
-export interface Text13 {
-    runs: Run35[]
+export interface Text9 {
+    runs: Run21[]
 }
 
-export interface Run35 {
+export interface Run21 {
     text: string
 }
 
-export interface NavigationEndpoint14 {
+export interface NavigationEndpoint9 {
     clickTrackingParams: string
-    browseEndpoint: BrowseEndpoint4
+    browseEndpoint: BrowseEndpoint9
 }
 
-export interface BrowseEndpoint4 {
+export interface BrowseEndpoint9 {
     browseId: string
     params: string
 }
 
 export interface OnDeselectedCommand {
     clickTrackingParams: string
-    browseEndpoint: BrowseEndpoint5
+    browseEndpoint: BrowseEndpoint10
 }
 
-export interface BrowseEndpoint5 {
+export interface BrowseEndpoint10 {
     browseId: string
     params: string
+}
+
+export interface Icon7 {
+    iconType: string
+}
+
+export interface Background2 {
+    musicThumbnailRenderer: MusicThumbnailRenderer4
+}
+
+export interface MusicThumbnailRenderer4 {
+    thumbnail: Thumbnail9
+    thumbnailCrop: string
+    thumbnailScale: string
+    trackingParams: string
+}
+
+export interface Thumbnail9 {
+    thumbnails: Thumbnail10[]
+}
+
+export interface Thumbnail10 {
+    url: string
+    width: number
+    height: number
 }

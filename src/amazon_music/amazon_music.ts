@@ -236,6 +236,10 @@ export namespace AmazonMusic {
         } catch (error) { return { "error": String(error) }; }
     }
 
+    export function getTrackID(track: {"primaryLink": {"deeplink": string}}){
+        return track.primaryLink.deeplink.replace(/\/.+?\/.+?\?trackAsin=/, '');
+    }
+
     export async function getPlaylist(playlist_url: string, opts: Opts){
         try {
             const amzn_music = opts.client ?? await getAmznMusicData(playlist_url, opts);
@@ -289,39 +293,6 @@ export namespace AmazonMusic {
     }
     export async function addToPlaylist(playlist_url: string, playlist_name: string, uids: string[], opts: Opts){
         try {
-            // for(const track of tracks){
-            //     if(track.amazonmusic){
-            //         try {
-            //             let parsed = JSON.parse(track.exid);
-            //             let exidIndex = -1;
-            //             for(let i = 0; i < parsed.length; i++)
-            //                 if(parsed[i].service == "amazon")
-            //                     exidIndex = i;
-            //             amznTracks.push( parsed[exidIndex].exid.id )
-            //         } catch (error) {
-            //             // console.log(error)
-            //         }
-            //     }
-            //     else{
-            //         try {
-            //             let query = track.video_name.replaceAll('  ', ' ')
-            //             query = formatQuery(query)
-            //             let searchTrack = (await searchAmazonMusic(query))[0];
-            //             let newexid;
-                        
-            //             if(track.exid == ""){
-            //                 newexid = JSON.stringify([{'exid': searchTrack, 'service': 'amazon'}])
-            //             }else{
-            //                 newexid = JSON.stringify(JSON.parse(track.exid).push({'exid': searchTrack, 'service': 'amazon'}))
-            //             }
-            //             await SQLActions.updateTrackExid(track.uid, newexid, 'amazonmusic');
-            //             amznTracks.push(searchTrack.id)
-            //         } catch (error) {
-            //             // console.log('er', error)
-            //         }
-            //     }
-            // }
-            // console.log(amznTracks)
             const playlist_id = playlist_url.replace(/(https?:\/\/)?(www\.)?music\.amazon\.com\/my\/playlists\//, '');
         
             const amzn_music = opts.client ?? await getAmznMusicData(playlist_url, opts);
@@ -350,5 +321,82 @@ export namespace AmazonMusic {
             });
             return response;
         } catch (error) { return { "error": error }; }
+    }
+    function pause(ms: number) { return new Promise( resolve => setTimeout(resolve, ms) ); }
+    export async function deleteFromPlaylist(playlist_url: string, track_ids: string[], delay: number, opts: Opts){
+        try {
+            const playlist_id = playlist_url.replace(/(https?:\/\/)?(www\.)?music\.amazon\.com\/my\/playlists\//, '');
+        
+            const amzn_music = opts.client ?? await getAmznMusicData(playlist_url, opts);
+            if("error" in amzn_music) throw amzn_music.error;
+
+            const playlist = await getPlaylist(playlist_url, {"client": amzn_music});
+            if("error" in playlist) throw playlist.error;
+            
+            const user_hash = getUserHash();
+            const request_headers = await getAmznMusicRequestHeadersDefault(amzn_music, playlist_url, opts);
+            if("error" in request_headers) throw request_headers.error;
+            
+            let result = {"ok": true};
+            for(const track_id in track_ids){
+                try {
+                    const playlist_item = playlist.tracks.find((item) => getTrackID(item) === track_id);
+                    const request_payload = {
+                        "headers": JSON.stringify(request_headers),
+                        "playlistId": playlist_id,
+                        "trackEntryId": playlist_item?.id,
+                        "trackId": track_id,
+                        "userHash": JSON.stringify(user_hash),
+                    };
+                    const response = await fetch("https://na.mesk.skill.music.a2z.com/api/removeTrackFromPlaylist", {'method': 'POST', 'headers': getAmznMusicHeaders(opts.cookie_jar),
+                        'body': JSON.stringify(request_payload)
+                    });
+                    if(!response.ok) result.ok = false;
+                } catch (error) { result.ok = false; }
+                finally { if(delay > 0) pause(delay); }
+            }
+            return result;
+        } catch (error) { return { "error": error }; }
+    }
+    export async function createPlaylist(playlist_name: string, opts: Opts){
+        const url = "https://music.amazon.com/my/library";
+        const amzn_music = opts.client ?? await getAmznMusicData(url, opts);
+        if("error" in amzn_music) throw amzn_music.error;
+    
+        const user_hash = getUserHash();
+        const request_headers = await getAmznMusicRequestHeadersDefault(amzn_music, url, opts);
+        if("error" in request_headers) throw request_headers.error;
+        
+        const playlist_info = { "interface":"Web.TemplatesInterface.v1_0.Touch.PlaylistTemplateInterface.PlaylistClientInformation", "name": playlist_name, "path":"/my/library" };
+
+        const request_payload = {
+            "headers": JSON.stringify(request_headers),
+            "playlistInfo": JSON.stringify(playlist_info),
+            "userHash": JSON.stringify(user_hash)
+        };
+        const response = await fetch("https://na.mesk.skill.music.a2z.com/api/createPlaylist", {'method': 'POST', 'headers': getAmznMusicHeaders(opts.cookie_jar),
+            'body': JSON.stringify(request_payload)
+        });
+        return response;
+    }
+    export async function deletePlaylist(playlist_url: string, opts: Opts){
+        const amzn_music = opts.client ?? await getAmznMusicData(playlist_url, opts);
+        if("error" in amzn_music) throw amzn_music.error;
+    
+        const user_hash = getUserHash();
+        const request_headers = await getAmznMusicRequestHeadersDefault(amzn_music, playlist_url, opts);
+        if("error" in request_headers) throw request_headers.error;
+
+        const playlist_id = playlist_url.replace("https://", "").replace("www.", "music.amazon.com/").replace("my/playlists/", "");
+        
+        const request_payload = {
+            "headers": JSON.stringify(request_headers),
+            "id": playlist_id,
+            "userHash": JSON.stringify(user_hash)
+        };
+        const response = await fetch("https://na.mesk.skill.music.a2z.com/api/removePlaylist", {'method': 'POST', 'headers': getAmznMusicHeaders(opts.cookie_jar),
+            'body': JSON.stringify(request_payload)
+        });
+        return response;
     }
 }

@@ -28,7 +28,7 @@ export namespace Spotify {
             domains: string[],
         }
     }
-    interface Client { 
+    export interface Client { 
         session: ClientSession, 
         client_token: ClientToken 
     }
@@ -129,11 +129,8 @@ export namespace Spotify {
         const split = uri.split(':');
         return split[split.length - 1];
     }
-    export async function getPlaylist(url: string, opts: {"limit"?: number, "offset"?: number} & Opts): Promise<UserPlaylist | ResponseError> {
+    export async function getPlaylist(playlist_id: string, opts: {"limit"?: number, "offset"?: number} & Opts): Promise<UserPlaylist | ResponseError> {
         try {
-            if(valid_playlist_regex.test(url) === false) throw "Not a known Spotify Playlist URL";
-
-            const playlist_id = url.replace(/https:\/\/open\.spotify\.com\/(playlist)\//,'');
             const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
             
             if("error" in client) throw client.error;
@@ -150,11 +147,8 @@ export namespace Spotify {
             return playlist_data;
         } catch (error) { return { 'error': String(error) }; }
     }
-    export async function getAlbum(url: string, opts: {"limit"?: number, "offset"?: number} & Opts): Promise<Album | ResponseError> {
+    export async function getAlbum(album_id: string, opts: {"limit"?: number, "offset"?: number} & Opts): Promise<Album | ResponseError> {
         try {
-            if(valid_album_regex.test(url) === false) throw "Not a known Spotify Album URL";
-
-            const album_id = url.replace(/https:\/\/open\.spotify\.com\/(album)\//,'');
             const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);
             
             if("error" in client) throw client.error;
@@ -171,9 +165,8 @@ export namespace Spotify {
             return album_data;
         } catch (error) { return { 'error': String(error) }; }
     }
-    export async function getCollection(url: string, opts: {"limit"?: number, "offset"?: number} & Opts): Promise<Collection | ResponseError> {
+    export async function getCollection(opts: {"limit"?: number, "offset"?: number} & Opts): Promise<Collection | ResponseError> {
         try {
-            if(valid_collection_regex.test(url) === false) throw "Not a known Spotify Collection URL";
             if(opts.cookie_jar === undefined) throw "Undefined Cookies for Spotify Collection";
 
             const client = opts.client !== undefined ? opts.client : await getClient("https://open.spotify.com/", opts.cookie_jar);

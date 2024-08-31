@@ -1,6 +1,6 @@
-export type Continutation = Continutation0[]
+export type Continuation = Continuation0[]
 
-export interface Continutation0 {
+export interface Continuation0 {
   nextContinuationData: NextContinuationData
 }
 

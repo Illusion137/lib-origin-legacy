@@ -17,12 +17,12 @@ interface Library {
 
 interface Tracks {
     __typename: string
-    items: Item[]
+    items: CollectionItem[]
     pagingInfo: PagingInfo
     totalCount: number
 }
 
-interface Item {
+export interface CollectionItem {
     __typename: string
     addedAt: AddedAt
     track: Track

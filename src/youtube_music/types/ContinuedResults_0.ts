@@ -2,8 +2,6 @@ export interface ContinuedResults_0 {
     responseContext: ResponseContext
     contents: Contents
     trackingParams: string
-    maxAgeStoreSeconds: number
-    background: Background2
 }
 
 export interface ResponseContext {

@@ -1,4 +1,4 @@
-import { ResponseError } from "./utils/types";
+import { ResponseError } from "../utils/types";
 
 export namespace Musi {
     type SuccessData = { title: string, data: Track[] };

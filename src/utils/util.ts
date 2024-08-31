@@ -17,8 +17,8 @@ export function encodeParams(data: Record<string, any>){
 export function getMainKey(obj: object) { return Object.keys(obj)[0]; }
 export function extractStringFromPattern(str: string, pattern: RegExp){
 	const body_groups = pattern.exec(str);
-	if(body_groups === null) throw "Couldn't extract pattern from string, NULL found";
-	if(body_groups.length < 2) throw "Couldn't extract pattern from string";
+	if(body_groups === null) return {"error": "Couldn't extract pattern from string, NULL found"} ;
+	if(body_groups.length < 2) throw {"error": "Couldn't extract pattern from string"};
 	const extracted = body_groups[1];
 	return extracted;
 }
@@ -32,6 +32,14 @@ export function parseTime(clock_time: string): number {
 	}
 	return time;
 }
-export function parseRuns(runs: {text: string}[]): string {
+export function parseRuns(runs: ({text: string}[]) | undefined ): string {
+    if(runs === undefined) return "";
     return runs.map(run => run.text).join(" ");
 }
+export function emptyUndefined(str: string){ return str === "" ? undefined : str; }
+export function urlToId(url: string, ...remove_links: string[]){ 
+    let id = url.replace("https://", "").replace("www.", "");
+    for(const link of remove_links){ id = id.replace(link, ""); }
+    return id;
+}
+export function makeTopic(name: string){ return `${name} - Topic`; }

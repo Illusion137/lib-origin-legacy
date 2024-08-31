@@ -20,7 +20,7 @@ export interface Track {
 
 export interface CompactPlaylist {
     title: string
-    artist: string
+    artist: string[]
     uri: string
     thumbnail_uri?: string
     year?: number
@@ -40,6 +40,11 @@ export interface MusicServicePlaylist {
     description?: string
     thumbnail_uri?: string
     year?: number
+    playlist_continuation: Record<string, any>|null
+}
+export interface MusicServicePlaylistContinuation {
+    tracks: Track[]
+    playlist_continuation: Record<string, any>|null
 }
 
 export interface MusicSearchResponse {
@@ -70,6 +75,8 @@ export class MusicService {
     delete_tracks_from_playlist?: (tracks: Track[], playlist_uri: string) => Promise<boolean>
     get_user_playlists?: () => Promise<Map<MusicServicePlaylistTitle, MusicServicePlaylistURL>>
     get_playlist: (url: string) => Promise<MusicServicePlaylist>
+    get_playlist_continuation?: (continuation_data: any) => Promise<MusicServicePlaylistContinuation>
+    download_from_id?: (id: string) => Promise<string>
     has_credentials(){
         if(this.cookie_jar_callback === undefined) return false;
         for(const required_cookie_credential of this.required_cookie_credentials){
@@ -90,7 +97,9 @@ export class MusicService {
         add_tracks_to_playlist?: (tracks: Track[], playlist_uri: string) => Promise<boolean>
         delete_tracks_from_playlist?: (tracks: Track[], playlist_uri: string) => Promise<boolean>
         get_user_playlists?: () => Promise<Map<MusicServicePlaylistTitle, MusicServicePlaylistURL>>,
-        get_playlist: (url: string) => Promise<MusicServicePlaylist>
+        get_playlist: (url: string) => Promise<MusicServicePlaylist>,
+        get_playlist_continuation?: (continuation_data: any) => Promise<MusicServicePlaylistContinuation>,
+        download_from_id?: (id: string) => Promise<string>
     }){
         this.valid_playlist_url_regex = s.valid_playlist_url_regex;
         this.required_cookie_credentials = s.required_cookie_credentials;
@@ -104,5 +113,7 @@ export class MusicService {
         this.delete_tracks_from_playlist = s.delete_tracks_from_playlist;
         this.get_user_playlists = s.get_user_playlists;
         this.get_playlist = s.get_playlist;
+        this.get_playlist_continuation = s.get_playlist_continuation
+        this.download_from_id = s.download_from_id;
     }
 }

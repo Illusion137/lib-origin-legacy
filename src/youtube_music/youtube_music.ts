@@ -1,14 +1,14 @@
 import * as sha1 from 'sha1-uint8array'
 import { Cookie, CookieJar } from "../utils/cookie_util";
-import { encodeParams, extractStringFromPattern, getMainKey } from "../utils/util";
+import { encodeParams, extractStringFromPattern, getMainKey, parseRuns } from "../utils/util";
 import { YTCFG } from "./types/YTCFG";
 import * as Parser from "./parser";
-import { Continutation } from "./types/Continuation";
+import { Continuation } from "./types/Continuation";
 import { ContinuedResults_0 } from './types/ContinuedResults_0';
 import { ResponseError } from '../utils/types';
-import { HomeResults_0 } from './types/HomeResults_0';
-import { ExploreResults_0 } from './types/ExploreResults_0';
 import { InitialData } from './types/types';
+import { Content4, MusicCarouselShelfRenderer } from './types/ArtistResults_0';
+import { ArtistResults_1 } from './types/ArtistResults_1';
 
 export namespace YouTubeMusic {
     type Opts = { cookie_jar?: CookieJar };
@@ -18,7 +18,15 @@ export namespace YouTubeMusic {
         ytcfg: YTCFG
     };
 
-    export function getSapisidHashAuth(SAPISID: string, epoch: Date, ORIGIN = 'https://music.youtube.com') {
+    export function getSapisidHashAuth0(SAPISID: string, epoch: Date, ORIGIN = 'https://music.youtube.com') {
+        const time_stamp_seconds_str = String(epoch.getTime()).slice(0, 10);
+        const data_string = [time_stamp_seconds_str, SAPISID, ORIGIN].join(' ');
+        const data = Uint8Array.from(Array.from(data_string).map(letter => letter.charCodeAt(0)));
+        const sha_digest = sha1.createHash().update(data).digest("hex");
+        const SAPISIDHASH = `SAPISIDHASH ${time_stamp_seconds_str}_${sha_digest}`
+        return SAPISIDHASH;
+    }
+    export function getSapisidHashAuth1(SAPISID: string, epoch: Date, ORIGIN = 'https://music.youtube.com') {
         const time_stamp_seconds_str = String(epoch.getTime()).slice(0, 10);
         const data_string = [time_stamp_seconds_str, SAPISID, ORIGIN].join(' ');
         const data = Uint8Array.from(Array.from(data_string).map(letter => letter.charCodeAt(0)));
@@ -50,6 +58,9 @@ export namespace YouTubeMusic {
             ]
         };
     }
+    export function playlistURLToID(playlist_url: string){
+        return playlist_url.replace("https://", "").replace("www.", "").replace("music.youtube.com/playlist?list=", "");
+    }
     export function getPostHeaders(cookie_jar: CookieJar, epoch: Date){
         const SAPISID = cookie_jar.getCookie("SAPISID")?.getData().value;
         if (SAPISID === undefined) throw "SAPISID doesn't exist";
@@ -57,7 +68,7 @@ export namespace YouTubeMusic {
             "User-Agent": 'Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.87 Mobile Safari/537.36',
             "accept": "*/*",
             "accept-language": "en-US,en;q=0.9",
-            "authorization": getSapisidHashAuth(SAPISID, epoch),
+            "authorization": getSapisidHashAuth0(SAPISID, epoch),
             "content-type": "application/json",
             "priority": "u=1, i",
             "sec-ch-ua": "\"Not/A)Brand\";v=\"8\", \"Chromium\";v=\"126\", \"Google Chrome\";v=\"126\"",
@@ -170,23 +181,68 @@ export namespace YouTubeMusic {
         } catch (error) { return { "error": String(error) }; }
     }
     type ICFGData<T> = { icfg: ICFG, data: T };
-    export async function getHome(opts: Opts)   : Promise<ICFGData<HomeResults_0[]>>    { return await parseInitial(opts, "https://music.youtube.com/", Parser.parseHomeContents); }
-    export async function getExplore(opts: Opts): Promise<ICFGData<ExploreResults_0[]>> { return await parseInitial(opts, "https://music.youtube.com/explore", Parser.parseExploreContents); }
+    type SearchMode = "All" | "Songs" | "Videos" | "Albums" | "Community playlists" | "Artists" | "Episodes" | "Profiles";
+    type Endpoint = { "query": string, "params": string };
+    export async function getHome(opts: Opts)   : Promise<ICFGData<ReturnType<typeof Parser.parseHomeContents>>>                           { return await parseInitial(opts, "https://music.youtube.com/", Parser.parseHomeContents); }
+    export async function getExplore(opts: Opts): Promise<ICFGData<ReturnType<typeof Parser.parseExploreContents>>>                        { return await parseInitial(opts, "https://music.youtube.com/explore", Parser.parseExploreContents); }
     export async function getPlaylist(opts: Opts, playlist_id: string): Promise<ICFGData<ReturnType<typeof Parser.parsePlaylistContents>>> { return await parseInitial(opts, `https://music.youtube.com/playlist?list=${playlist_id}`, Parser.parsePlaylistContents); }
-    export async function getArtist(opts: Opts, artist_id: string)     { return await parseInitial(opts, `https://music.youtube.com/channel/${artist_id}`, Parser.parseArtistContents); }
-    export async function search(opts: Opts, search_query: string)     { return await parseInitial(opts, `https://music.youtube.com/search?q=${encodeURIComponent(search_query).replace(/%20/g, '+')}`, Parser.parseSearchContents); }
+    export async function getArtist(opts: Opts, artist_id: string): Promise<ICFGData<ReturnType<typeof Parser.parseArtistContents>>>       { return await parseInitial(opts, `https://music.youtube.com/channel/${artist_id}`, Parser.parseArtistContents); }
+    export async function getArtistTracks(opts: Opts, artist_id: string){
+        try {
+            const artist_response = await getArtist(opts, artist_id);
+            const music_shelf_renderer_endpoint_id: string = artist_response.data.top_shelf.bottomEndpoint.browseEndpoint.browseId.replace("VL", "") as string;
+            const playlist_response = await getPlaylist(opts, music_shelf_renderer_endpoint_id);
+            return playlist_response;
+        } catch (error) { return { "error": String(error) }; }
+    }
+    export async function getArtistAlbums(opts: Opts, artist_id: string){
+        try {
+            const artist_response = await getArtist(opts, artist_id);
+            const albums_shelf = artist_response.data.shelfs.find(shelf => shelf.header.musicCarouselShelfBasicHeaderRenderer.title.runs[0].text === "Albums") as MusicCarouselShelfRenderer;
+            const singles_shelf = artist_response.data.shelfs.find(shelf => shelf.header.musicCarouselShelfBasicHeaderRenderer.title.runs[0].text === "Singles") as MusicCarouselShelfRenderer;
+            const albums_shelf_has_endpoint = albums_shelf?.header.musicCarouselShelfBasicHeaderRenderer.title.runs[0]?.navigationEndpoint !== undefined;
+            const singles_shelf_has_endpoint = singles_shelf?.header.musicCarouselShelfBasicHeaderRenderer.title.runs[0]?.navigationEndpoint !== undefined;
+            if(!albums_shelf_has_endpoint && !singles_shelf_has_endpoint){
+                const merged_shelf = albums_shelf.contents.concat(singles_shelf.contents);
+                return merged_shelf.sort((album1, album2) => Parser.findAlbumYear(album1) - Parser.findAlbumYear(album2))
+            }
+            let browse_endpoint: string;
+            if(albums_shelf_has_endpoint) browse_endpoint = albums_shelf.header.musicCarouselShelfBasicHeaderRenderer.title.runs[0]?.navigationEndpoint?.browseEndpoint.browseId as string;
+            else                          browse_endpoint = singles_shelf.header.musicCarouselShelfBasicHeaderRenderer.title.runs[0]?.navigationEndpoint?.browseEndpoint.browseId as string;
+            const payload = { "browseId": browse_endpoint };
+            const browse_response = await postCheckResponse(opts, artist_response.icfg.ytcfg, "browse?prettyPrint=false", payload);
+            if("error" in browse_response) throw browse_response.error;
+            const browse_data: ArtistResults_1 = await browse_response.json();
+            return browse_data.contents.singleColumnBrowseResultsRenderer.tabs[0].tabRenderer.content.sectionListRenderer.contents[0].gridRenderer.items.map(item => item.musicTwoRowItemRenderer);
+        } catch (error) { return { "error": String(error) }; }
+    }
+    export async function search(opts: Opts, search_query: string): Promise<ICFGData<ReturnType<typeof Parser.parseSearchContents>>>       { return await parseInitial(opts, `https://music.youtube.com/search?q=${encodeURIComponent(search_query).replace(/%20/g, '+')}`, Parser.parseSearchContents); }
+    export async function searchMode(opts: Opts, endpoint: Endpoint, ytcfg: YTCFG) {
+        try {
+            if(endpoint === undefined) throw "Endpoint Undefined";
+            const payload = endpoint;
+            const search_response = await postCheckResponse(opts, ytcfg, "search?prettyPrint=false", payload);
+            if("error" in search_response) throw search_response.error;
+            const browse_data = await search_response.json();
+            return Parser.parseSearchContents([undefined, browse_data]);
+        } catch (error) { return { "error": String(error) }; }
+    }
+    export async function fullSearch(opts: Opts, search_query: string, mode: SearchMode){
+        try {
+            const all_search = await search(opts, search_query);
+            if(mode === "All") return all_search;
+            return searchMode(opts, all_search.data.mode_endpoints.find(endpoint => endpoint.id == mode)?.endpoint as Endpoint, all_search.icfg.ytcfg);
+        } catch (error) { return { "error": String(error) }; }
+    }
     
-    export async function getLibrary(opts: Opts) { 
+    export async function getLibrary(opts: Opts): Promise<ICFGData<ReturnType<typeof Parser.parseLibraryContents>>|ResponseError> { 
         try {
             const icfg = await getInitialDataConfig(opts, "https://music.youtube.com/library");
             if ("error" in icfg) throw icfg.error;
-            const payload = {
-                "browseId": "FEmusic_library_landing",
-            };
+            const payload = { "browseId": "FEmusic_liked_playlists" };
             const browse_response = await postCheckResponse(opts, icfg.ytcfg, "browse?prettyPrint=false", payload);
             if("error" in browse_response) throw browse_response.error;
             const browse_data = await browse_response.json();
-            // console.log(browse_data);
             return {
                 "icfg": icfg,
                 "data": Parser.parseLibraryContents(browse_data)
@@ -194,7 +250,7 @@ export namespace YouTubeMusic {
         } catch (error) { return { "error": String(error) }; }
     }
 
-    export async function getContinuation(opts: Opts, ytcfg: YTCFG, next_con: Continutation) {
+    export async function getContinuation(opts: Opts, ytcfg: YTCFG, next_con: Continuation) {
         try {
             const query_params = {
                 ctoken: next_con[0].nextContinuationData.continuation,
@@ -224,8 +280,6 @@ export namespace YouTubeMusic {
         if("error" in response) return false;
         return response.ok;
     } 
-    export function fetchAlbumID(){}
-    export function fetchArtistID(){}
     export async function postLike(opts: Opts, ytcfg: YTCFG, video_id: string, like_path: string){
         const payload = {
             target: { videoId: video_id },

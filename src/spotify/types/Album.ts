@@ -140,7 +140,7 @@ interface Tracks2 {
     items: Item4[]
 }
 
-interface Item4 {
+export interface Item4 {
     uid: string
     track: Track
 }

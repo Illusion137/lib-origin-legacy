@@ -62,14 +62,14 @@ interface DefaultValue {
 
 interface Widget {
     interface: string
-    items: Item[]
+    items: AmazonTrack[]
     onEndOfWidget: any[]
     onTrackReorder: OnTrackReorder[]
     uuid: string
     onViewed: OnViewed4[]
 }
 
-interface Item {
+export interface AmazonTrack {
     interface: string
     primaryText: string
     primaryLink: PrimaryLink
