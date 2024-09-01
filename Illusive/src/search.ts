@@ -136,7 +136,7 @@ export async function youtube_music_search(query: string): Promise<MusicSearchRe
 }
 
 export async function soundcloud_search(query: string): Promise<MusicSearchResponse> {
-    const search_response = await Origin.SoundCloud.search("TRACKS", {"query": query});
+    const search_response = await Origin.SoundCloud.search("EVERYTHING", {"query": query});
     if("error" in search_response){
         return {
             "tracks": [],
@@ -158,7 +158,9 @@ export async function soundcloud_search(query: string): Promise<MusicSearchRespo
                 "title": track.title,
                 "artists": [track.user.username],
                 "duration": Math.floor(track.full_duration / 1000),
-                "soundcloud": track.id
+                "soundcloud_id": String(track.id),
+                "soundcloud_permalink": track.permalink_url,
+                "soundcloud_thumbnail": track.artwork_url
             }
         }),
         "playlists": playlists.map(playlist => {

@@ -122,7 +122,8 @@ export namespace SoundCloud {
     export async function search(search_type: "PEOPLE", opts: Opts & { "query": string, "depth"?: number, "limit"?: number, "offset"?: number }): PromiseError<SearchOf<User>>
     export async function search(search_type: "ALBUMS", opts: Opts & { "query": string, "depth"?: number, "limit"?: number, "offset"?: number }): PromiseError<SearchOf<Playlist>>
     export async function search(search_type: "PLAYLISTS", opts: Opts & { "query": string, "depth"?: number, "limit"?: number, "offset"?: number }): PromiseError<SearchOf<Playlist>>
-    export async function search(search_type: SearchType = "EVERYTHING", opts: Opts & { "query": string, "depth"?: number, "limit"?: number, "offset"?: number }): PromiseError<SearchOf<Playlist|User|Track>> {
+    export async function search(search_type: "EVERYTHING", opts: Opts & { "query": string, "depth"?: number, "limit"?: number, "offset"?: number }): PromiseError<SearchOf<Playlist|Track|User>>
+    export async function search(search_type: SearchType, opts: Opts & { "query": string, "depth"?: number, "limit"?: number, "offset"?: number }): PromiseError<SearchOf<Playlist|Track|User>> {
         try {
             opts.client_id = opts.client_id === undefined ? await getClientID() : opts.client_id;
             if (typeof opts.client_id === "object") throw opts.client_id.error;

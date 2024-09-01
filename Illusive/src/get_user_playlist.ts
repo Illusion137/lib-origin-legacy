@@ -43,7 +43,7 @@ export async function apple_music_get_user_playlists(): Promise<Map<MusicService
     if("error" in user_playlists_response) return new Map<string, string>();
     const map = new Map<string, string>();
     Object.values(user_playlists_response.resources['library-playlists']).forEach(item => {
-        map.set(item.attributes.name, `https://music.apple.com/us/library/playlist/${item.id}?l=en-US`);
+        map.set(item.attributes.name, `https://music.apple.com/library/playlist/${item.id}?l=en-US`);
     });
     return map;
 }

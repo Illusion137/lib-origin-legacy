@@ -1,6 +1,6 @@
 import * as Origin from '../../index'
-import { MusicServicePlaylist, MusicServicePlaylistContinuation } from './types'
-import { emptyUndefined, extractStringFromPattern, generateNewUID, makeTopic, parseRuns, parseTime, urlToId } from '../../src/utils/util';
+import { MusicServicePlaylist, MusicServicePlaylistContinuation, Track } from './types'
+import { emptyUndefined, extractStringFromPattern, generateNewUID, getMainKey, makeTopic, parseRuns, parseTime, urlToId } from '../../src/utils/util';
 import * as SCSearch from '../../src/soundcloud/types/Search';
 import { Prefs } from './prefs';
 import { CookieJar } from '../../src/utils/cookie_util';
@@ -17,6 +17,7 @@ import { Item4 } from '../../src/spotify/types/Album';
 import { CollectionItem } from '../../src/spotify/types/Collection';
 import { AmazonTrack } from '../../src/amazon_music/types/ShowHomeCreateAndBindMethod';
 import { AppleTrack } from '../../src/apple_music/types/TrackListSection';
+import { AppleUserPlaylistTrack } from '../../src/apple_music/types/UserPlaylist';
 
 export async function musi_get_playlist(url: string): Promise<MusicServicePlaylist> {
     const playlist_response = await Origin.Musi.getPlaylist(url);
@@ -37,7 +38,7 @@ export async function musi_get_playlist(url: string): Promise<MusicServicePlayli
 }
 
 type YouTubePlaylistContinuation = {"ytcfg": YT_YTCFG.YTCFG, "continuation": YT_CONTINUATION.Continuation};
-function parse_youtube_playlist_track(track: YouTubeTrack){
+function parse_youtube_playlist_track(track: YouTubeTrack): Track{
     return {
         "uid": generateNewUID(parseRuns(track.title.runs)),
         "title": parseRuns(track.title.runs),
@@ -69,7 +70,7 @@ export async function youtube_get_playlist_continuation(opts: YouTubePlaylistCon
 
 type Runs = {text: string}[];
 type YouTubeMusicPlaylistContinuation = {"ytcfg": YTMUSIC_YTCFG.YTCFG, "continuation": YTMUSIC_CONTINUATION.Continuation, "type": "ALBUM" | "PLAYLIST", "artist"?: Runs, "album"?: Runs};
-function parse_youtube_music_album_track(track: YouTubeMusicPlaylistTrack, artists: Runs, album: Runs){
+function parse_youtube_music_album_track(track: YouTubeMusicPlaylistTrack, artists: Runs, album: Runs): Track{
     return {
         "uid": generateNewUID(parseRuns(track.flexColumns[0].musicResponsiveListItemFlexColumnRenderer.text.runs)),
         "title": parseRuns(track.flexColumns[0].musicResponsiveListItemFlexColumnRenderer.text.runs),
@@ -81,7 +82,7 @@ function parse_youtube_music_album_track(track: YouTubeMusicPlaylistTrack, artis
         "youtubemusic_id": track.playlistItemData.playlistSetVideoId
     }
 }
-function parse_youtube_music_playlist_track(track: YouTubeMusicPlaylistTrack){
+function parse_youtube_music_playlist_track(track: YouTubeMusicPlaylistTrack): Track{
     return {
         "uid": generateNewUID(parseRuns(track.flexColumns[0].musicResponsiveListItemFlexColumnRenderer.text.runs)),
         "title": parseRuns(track.flexColumns[0].musicResponsiveListItemFlexColumnRenderer.text.runs),
@@ -137,7 +138,7 @@ export async function youtube_music_get_playlist_continuation(opts: YouTubeMusic
 }
 
 type SpotifyPlaylistContinuation = {"client": Origin.Spotify.Client, "id": string, "current": number, "total": number, "limit": number, "type": "ALBUM" | "PLAYLIST" | "COLLECTION"};
-function parse_spotify_playlist_track(track: ContentItem){
+function parse_spotify_playlist_track(track: ContentItem): Track{
     return {
         "uid": generateNewUID(track.itemV2.data.name),
         "title": track.itemV2.data.name,
@@ -149,7 +150,7 @@ function parse_spotify_playlist_track(track: ContentItem){
         "spotify_id": track.itemV2.data.uri
     }
 }
-function parse_spotify_album_track(track: Item4, album_name: string){
+function parse_spotify_album_track(track: Item4, album_name: string): Track{
     return {
         "uid": generateNewUID(track.track.name),
         "title": track.track.name,
@@ -161,7 +162,7 @@ function parse_spotify_album_track(track: Item4, album_name: string){
         "spotify_id": track.track.uri
     }
 }
-function parse_spotify_collection_track(track: CollectionItem){
+function parse_spotify_collection_track(track: CollectionItem): Track{
     return {
         "uid": generateNewUID(track.track.data.name),
         "title": track.track.data.name,
@@ -252,7 +253,7 @@ export async function spotify_get_playlist_continuation(opts: SpotifyPlaylistCon
     }
 }
 
-function parse_amazon_music_playlist_track(track: AmazonTrack){
+function parse_amazon_music_playlist_track(track: AmazonTrack): Track{
     const album_regex = /([a-zA-Z?><{}|!@#$%^&*]+\s?[a-zA-Z?><{}|!@#$%^&*])+/;
     return {
         "uid": generateNewUID(track.primaryText),
@@ -275,14 +276,16 @@ export async function amazon_music_get_playlist(url: string): Promise<MusicServi
 }
 
 type SoundcloudPlaylistContinuation = {"next_href": string|null, "locale_params": {"client_id": string}, "depth": number};
-function parse_soundcloud_artist_track(track: SCSearch.Track){
+function parse_soundcloud_artist_track(track: SCSearch.Track): Track{
     return {
         "uid": generateNewUID(track.title),
         "title": makeTopic(track.title),
         "artists": [track.user.username],
         "plays": track.playback_count,
         "duration": Math.floor(track.duration / 1000),
-        "soundcloud_id": String(track.id)
+        "soundcloud_id": String(track.id),
+        "soundcloud_permalink": track.permalink_url,
+        "soundcloud_thumbnail": track.artwork_url
     }
 }
 export async function soundcloud_get_playlist(url: string): Promise<MusicServicePlaylist> {
@@ -336,25 +339,73 @@ export async function soundcloud_get_playlist_continuation(opts: SoundcloudPlayl
     };
 }
 
-function parse_apple_music_playlist_track(track: AppleTrack){
+type AppleMusicPlaylistContinuation = {"playlist_id": string, "offset": number, "total": number, "authorization": string};
+function parse_apple_music_playlist_track(track: AppleTrack): Track{
     return {
         "uid": generateNewUID(track.title),
         "title": track.title,
         "artists": track.subtitleLinks.map(link => link.title),
         "album": track.tertiaryLinks?.[0]?.title,
         "duration": Math.floor(track.duration / 1000),
+        "explicit": track.showExplicitBadge,
         "applemusic_id": track.id
     }
 }
-export async function apple_music_get_playlist(url: string): Promise<MusicServicePlaylist> {
-    const playlist_response = await Origin.AppleMusic.getPlaylist(url, {});
-    if("error" in playlist_response) return {"title": "", "tracks": [], "playlist_continuation": null};
+function parse_apple_music_user_playlist_track(track: AppleUserPlaylistTrack): Track{
     return {
-        "title": url.includes("library") ? "You" : playlist_response.sections[0].items[0].title,
-        "creator": playlist_response.sections[0].items[0].subtitleLinks.map(link => link.title),
-        "thumbnail_uri": playlist_response.sections[0].items[0].artwork.dictionary.url,
-        "tracks": playlist_response.sections[1].items.map(track => parse_apple_music_playlist_track(track)), 
-        "playlist_continuation": 
+        "uid": generateNewUID(track.attributes.name),
+        "title": track.attributes.name,
+        "artists": track.attributes.artistName.split(" & "),
+        "album": track.attributes.albumName,
+        "duration": Math.floor(track.attributes.durationInMillis / 1000),
+        "explicit": track.attributes.contentRating !== undefined && track.attributes.contentRating === "explicit",
+        "applemusic_id": track.id
+    };
+}
+export async function apple_music_get_playlist(url: string): Promise<MusicServicePlaylist> {
+    const cookie_jar: CookieJar = Prefs.getPref("apple_music_cookie_jar");
+    const playlist_path = urlToId(url, "music.apple.com/");
+    const playlist_response = await Origin.AppleMusic.getPlaylist(playlist_path, {"cookie_jar": cookie_jar});
+    if("error" in playlist_response) return {"title": "", "tracks": [], "playlist_continuation": null};
+    if("resources" in playlist_response.data){ // User Playlist
+        const playlist_data_main_key = getMainKey(playlist_response.data.resources.playlists);
+        const playlist_data = playlist_response.data.resources.playlists[playlist_data_main_key];
+        const playlist_songs = playlist_response.data.resources['library-songs'];
+        const playlist_id = urlToId(playlist_path, "us/", "library/", "playlist/", "?l=en-US");
+        const song_keys = Object.keys(playlist_songs);
+
+        const playlist_meta_main_key = getMainKey(playlist_response.data.resources["library-playlists"]);
+
+        return {
+            "title": playlist_data.attributes.name,
+            "creator": [playlist_data.attributes.curatorName],
+            "thumbnail_uri": playlist_data.attributes.artwork.url,
+            "description": playlist_data.attributes.description.standard,
+            "year": new Date(playlist_data.attributes.lastModifiedDate).getFullYear(),
+            "tracks": song_keys.map(key => parse_apple_music_user_playlist_track(playlist_songs[key])), 
+            "playlist_continuation": {"playlist_id": playlist_id, "offset": 0 + song_keys.length, "total": playlist_response.data.resources["library-playlists"][playlist_meta_main_key].relationships.tracks.meta.total, "authorization": playlist_response.authorization} as AppleMusicPlaylistContinuation
+        };
+    }
+    else {
+        return {
+            "title": playlist_response.data.sections[0].items[0].title,
+            "creator": playlist_response.data.sections[0].items[0].subtitleLinks.map(link => link.title),
+            "thumbnail_uri": playlist_response.data.sections[0].items[0].artwork.dictionary.url,
+            "tracks": playlist_response.data.sections[1].items.map(track => parse_apple_music_playlist_track(track)), 
+            "playlist_continuation": null
+        };
+    }
+}
+export async function apple_music_get_playlist_continuation(opts: AppleMusicPlaylistContinuation): Promise<MusicServicePlaylistContinuation>{
+    const cookie_jar: CookieJar = Prefs.getPref("apple_music_cookie_jar");
+    if(opts.offset >= opts.total) return { "tracks":[], "playlist_continuation": null };
+    const playlist_response = await Origin.AppleMusic.getPlaylistContinuation(opts.playlist_id, opts.offset, opts.authorization, {"cookie_jar": cookie_jar});
+    if("error" in playlist_response) return { "tracks":[], "playlist_continuation": null };
+    const playlist_songs = playlist_response.resources['library-songs'];
+    const song_keys = Object.keys(playlist_songs);
+    return {
+        "tracks": song_keys.map(key => parse_apple_music_user_playlist_track(playlist_songs[key])),
+        "playlist_continuation": {"playlist_id": opts.playlist_id, "offset": opts.offset + song_keys.length, "total": opts.total, "authorization": opts.authorization} as AppleMusicPlaylistContinuation
     }
 }
 

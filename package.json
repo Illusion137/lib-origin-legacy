@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/Illusion137/lib-origin#readme",
   "dependencies": {
+    "@distube/ytdl-core": "^4.14.4",
     "axios": "^1.6.8",
     "fs": "^0.0.1-security",
     "sha1-uint8array": "^0.10.7"

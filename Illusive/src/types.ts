@@ -1,4 +1,5 @@
 import { CookieJar } from "../../src/utils/cookie_util"
+import { ResponseError } from "../../src/utils/types"
 
 export interface Track {
     uid: string
@@ -12,6 +13,8 @@ export interface Track {
     youtube_id?: string
     youtubemusic_id?: string
     soundcloud_id?: string
+    soundcloud_permalink?: string
+    soundcloud_thumbnail?: string
     spotify_id?: string
     amazonmusic_id?: string
     applemusic_id?: string
@@ -63,6 +66,7 @@ export type MusicServicePlaylistTitle = string;
 export type MusicServicePlaylistURL = string;
 
 export class MusicService {
+    app_icon: string | number
     link_text: string
     valid_playlist_url_regex: RegExp
     required_cookie_credentials: string[]
@@ -76,7 +80,7 @@ export class MusicService {
     get_user_playlists?: () => Promise<Map<MusicServicePlaylistTitle, MusicServicePlaylistURL>>
     get_playlist: (url: string) => Promise<MusicServicePlaylist>
     get_playlist_continuation?: (continuation_data: any) => Promise<MusicServicePlaylistContinuation>
-    download_from_id?: (id: string) => Promise<string>
+    download_from_id?: (id: string) => Promise<string|ResponseError>
     has_credentials(){
         if(this.cookie_jar_callback === undefined) return false;
         for(const required_cookie_credential of this.required_cookie_credentials){
@@ -86,6 +90,7 @@ export class MusicService {
         return true;
     }
     constructor(s: {
+        app_icon: string | number,
         link_text: string,
         valid_playlist_url_regex: RegExp,
         required_cookie_credentials: string[],
@@ -99,8 +104,9 @@ export class MusicService {
         get_user_playlists?: () => Promise<Map<MusicServicePlaylistTitle, MusicServicePlaylistURL>>,
         get_playlist: (url: string) => Promise<MusicServicePlaylist>,
         get_playlist_continuation?: (continuation_data: any) => Promise<MusicServicePlaylistContinuation>,
-        download_from_id?: (id: string) => Promise<string>
+        download_from_id?: (id: string) => Promise<string|ResponseError>
     }){
+        this.app_icon = s.app_icon
         this.valid_playlist_url_regex = s.valid_playlist_url_regex;
         this.required_cookie_credentials = s.required_cookie_credentials;
         this.link_text = s.link_text;

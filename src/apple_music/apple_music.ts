@@ -1,8 +1,9 @@
 import { CookieJar } from "../utils/cookie_util";
-import { encodeParams, extractStringFromPattern } from "../utils/util";
+import { encodeParams, extractStringFromPattern, urlToId } from "../utils/util";
 import { MyPlaylists } from "./types/MyPlaylists";
 import { Playlist } from "./types/Playlist";
 import { SerializedServerData } from "./types/type";
+import { UserPlaylist } from "./types/UserPlaylist";
 
 export namespace AppleMusic {
     type Opts = { "cookie_jar"?: CookieJar };
@@ -101,34 +102,52 @@ export namespace AppleMusic {
             return response;
         } catch (error) { return { "error": String(error) } }
     }
-    export async function getPlaylist(playlist_url: string, opts: Opts) {
-        const playlist_response = await getSerializedServerData(playlist_url, opts);
+    export async function getPlaylist(playlist_path: string, opts: Opts) {
+        const playlist_response = await getSerializedServerData(`https://music.apple.com/${playlist_path}`, opts);
         if ("error" in playlist_response) return playlist_response;
-        const playlist = playlist_response.data as Playlist;
-        return {"data": playlist[0].data, "authorization": playlist_response.authorization};
+        if(playlist_path.match(/us\/playlist\/.+?\/.+/)){ // Non-user playlist
+            const playlist = playlist_response.data as Playlist;
+            return {"data": playlist[0].data, "authorization": playlist_response.authorization};
+        }
+        else { // User playlist
+            const params = {
+                "art%5Blibrary-music-videos%3Aurl%5D": "c,f",
+                "art%5Burl%5D": "f",
+                "extend": "hasCollaboration,isCollaborativeHost",
+                "extend%5Blibrary-playlists%5D": "tags",
+                "fields%5Bmusic-videos%5D": "artistUrl,artwork,durationInMillis,url",
+                "fields%5Bsongs%5D": "artistUrl,artwork,durationInMillis,url",
+                "format%5Bresources%5D": "map",
+                "include": "catalog,artists,tracks",
+                "include%5Blibrary-playlists%5D": "catalog,tracks,playlists",
+                "include%5Bplaylists%5D": "curator",
+                "include%5Bsongs%5D": "artists",
+                "l": "en-US",
+                "omit%5Bresource%5D": "autos",
+                "platform": "web",
+                "relate": "catalog"
+            };
+            const playlist_id = urlToId(playlist_path, "us/", "library/", "playlist/", "?l=en-US");
+            const api_playlists_response = await apiCheckResponse(opts, playlist_response.authorization, `me/library/playlists/${playlist_id}`, params);
+            if ("error" in api_playlists_response) return api_playlists_response;
+            if(!api_playlists_response.ok) return {"error": String(api_playlists_response.status)};
+            const user_playlist: UserPlaylist = await api_playlists_response.json();
+            return {"data": user_playlist, "authorization": playlist_response.authorization};
+        }
     }
-    export async function getPlaylistContinuation(opts: Opts){
-        const data = await getSerializedServerData("https://music.apple.com/us/library/all-playlists/", opts);
-        if("error" in data) return data;
+    export async function getPlaylistContinuation(playlist_id: string, offset: number, authorization: string, opts: Opts){
         const params = {
-            "art%5Blibrary-music-videos%3Aurl%5D": "c,f",
-            "art%5Burl%5D": "f",
-            "extend": "hasCollaboration,isCollaborativeHost",
-            "extend%5Blibrary-playlists%5D": "tags",
-            "fields%5Bmusic-videos%5D": "artistUrl,artwork,durationInMillis,url",
-            "fields%5Bsongs%5D": "artistUrl,artwork,durationInMillis,url",
-            "format%5Bresources%5D": "map",
-            "include": "catalog,artists,tracks",
-            "include%5Blibrary-playlists%5D": "catalog,tracks,playlists",
-            "include%5Bplaylists%5D": "curator",
-            "include%5Bsongs%5D": "artists",
             "l": "en-US",
-            "omit%5Bresource%5D": "autos",
+            "offset": 100,
+            "art%5Burl%5D": "f",
+            "fields%5Bsongs%5D": "artistUrl,url",
+            "format%5Bresources%5D": "map",
+            "include": "catalog",
             "platform": "web",
         };
-        const playlists_response = await apiCheckResponse(opts, data.authorization, "me/library/playlists/p.7Pkeq4PcVPLK7Ae", params);
+        const playlists_response = await apiCheckResponse(opts, authorization, "me/library/playlists/p.7Pkeq4PcVPLK7Ae", params);
         if ("error" in playlists_response) return playlists_response;
-        return await playlists_response.json() as Playlist;
+        return await playlists_response.json() as UserPlaylist;
     }
     export async function getAllPlaylistsFromAccount(opts: Opts) {
         const data = await getSerializedServerData("https://music.apple.com/us/library/all-playlists/", opts);
