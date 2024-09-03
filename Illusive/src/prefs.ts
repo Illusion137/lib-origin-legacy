@@ -15,6 +15,16 @@ export namespace Prefs {
         "apple_music_cookie_jar": new CookieJar([]),
         
         "amazon_music_cookie_jar": new CookieJar([]),
+
+        "keep_prefs": true,
+        "auto_cache_thumbnails": false,
+        "use_cookies_on_download": false,
+        "only_play_downloaded": false,
+        "always_shuffle": true,
+        "get_account_playlists_in_get_playlist": false,
+        "recently_played_max_size": 100,
+        "default_playlist_max_size": 200,
+        "download_queue_max_length": 5,
     }
     let prefs: typeof default_prefs = {} as typeof default_prefs
     
@@ -26,8 +36,11 @@ export namespace Prefs {
         // }
     }
     
-    export function getPref(pref_key: PrefOptions): any { return prefs[pref_key]; }
-    export async function savePref(pref: PrefOptions, value: string) {
+    export function get_pref(pref_key: PrefOptions): any { return prefs[pref_key]; }
+    export async function save_pref(pref: PrefOptions, value: string) {
     
+    }
+    export async function reset_prefs(){
+        
     }
 }

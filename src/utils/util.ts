@@ -42,4 +42,14 @@ export function urlToId(url: string, ...remove_links: string[]){
     for(const link of remove_links){ id = id.replace(link, ""); }
     return id;
 }
-export function makeTopic(name: string){ return `${name} - Topic`; }
+export function makeTopic(title: string){ return `${title} - Topic`; }
+export function removeTopic(title: string){ return title.replace(" - Topic", ''); }
+export function isEmpty(value: any){ return value === undefined || value === null || value === 0 || value === "" || (typeof value === "string" && value.trim() === "") || (typeof value === "object" && Object.keys(value).length === 0); }
+export function removeProd(title: string) { return title.replace(/\(.+?\)/g, '').replace(/prod\. .+/, ''); }
+export function googleQuery(query: string) { return encodeURIComponent(query).split("%20").join("+"); }
+export function remove(str: string, r: string) { return str.replace(r, ''); }
+export function removeSpecialChars(str: string) {
+    const special_characters = "~`!@#$%^&*()_-+={[}]|\\:;\"'<,>.?/";
+    for(const char of special_characters) str = remove(str, char);
+    return str;
+}

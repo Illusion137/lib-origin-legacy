@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import * as sax from './PATCH/sax/index';
+const sax = require('./PATCH/sax/index');
 import * as utils from './utils';
 import * as formatUtils from './format-utils';
 import * as urlUtils from './url-utils';

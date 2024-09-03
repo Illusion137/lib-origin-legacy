@@ -145,7 +145,7 @@ export namespace SoundCloud {
             const search_response = await fetch(`https://api-v2.soundcloud.com/${searchTypeToApiMethod(search_type ?? "EVERYTHING")}${encodeParams(params)}`, apiMethodOptions());
             if(!search_response.ok) throw `${search_response.status} : ${search_response.statusText}`;
             const search_data: Search = await search_response.json() as Search;
-            const result: Search = combineContinuation(search_data, await continuation(search_data.next_href, locale_params, opts, opts.depth ?? 0) ) as unknown as Search;
+            const result: SearchOf<Playlist|Track|User> = combineContinuation(search_data, await continuation(search_data.next_href, locale_params, opts, opts.depth ?? 0) ) as unknown as SearchOf<Playlist|Track|User>;
             return result;
         } catch (error) { return { "error": String(error) }; }
     }

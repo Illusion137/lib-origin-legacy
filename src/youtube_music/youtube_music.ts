@@ -1,6 +1,6 @@
 import * as sha1 from 'sha1-uint8array'
 import { Cookie, CookieJar } from "../utils/cookie_util";
-import { encodeParams, extractStringFromPattern, getMainKey, parseRuns } from "../utils/util";
+import { encodeParams, extractStringFromPattern, getMainKey, googleQuery, parseRuns } from "../utils/util";
 import { YTCFG } from "./types/YTCFG";
 import * as Parser from "./parser";
 import { Continuation } from "./types/Continuation";
@@ -216,7 +216,7 @@ export namespace YouTubeMusic {
             return browse_data.contents.singleColumnBrowseResultsRenderer.tabs[0].tabRenderer.content.sectionListRenderer.contents[0].gridRenderer.items.map(item => item.musicTwoRowItemRenderer);
         } catch (error) { return { "error": String(error) }; }
     }
-    export async function search(opts: Opts, search_query: string): Promise<ICFGData<ReturnType<typeof Parser.parseSearchContents>>>       { return await parseInitial(opts, `https://music.youtube.com/search?q=${encodeURIComponent(search_query).replace(/%20/g, '+')}`, Parser.parseSearchContents); }
+    export async function search(opts: Opts, search_query: string): Promise<ICFGData<ReturnType<typeof Parser.parseSearchContents>>>       { return await parseInitial(opts, `https://music.youtube.com/search?q=${googleQuery(search_query)}`, Parser.parseSearchContents); }
     export async function searchMode(opts: Opts, endpoint: Endpoint, ytcfg: YTCFG) {
         try {
             if(endpoint === undefined) throw "Endpoint Undefined";

@@ -1,6 +1,6 @@
 import * as sha1 from 'sha1-uint8array'
 import { Cookie, CookieJar } from "../utils/cookie_util";
-import { encodeParams, extractStringFromPattern, getMainKey, parseRuns } from "../utils/util";
+import { encodeParams, extractStringFromPattern, getMainKey, googleQuery, parseRuns } from "../utils/util";
 import { YTCFG } from "./types/YTCFG";
 import * as Parser from "./parser";
 import { Continuation } from "./types/Continuation";
@@ -184,7 +184,8 @@ export namespace YouTube {
     export async function getExplore(opts: Opts): Promise<ICFGData<ReturnType<typeof Parser.parseExploreContents>>>                        { return await parseInitial(opts, "https://www.youtube.com/explore", Parser.parseExploreContents); }
     export async function getPlaylist(opts: Opts, playlist_id: string): Promise<ICFGData<ReturnType<typeof Parser.parsePlaylistContents>>> { return await parseInitial(opts, `https://www.youtube.com/playlist?list=${playlist_id}`, Parser.parsePlaylistContents); }
     export async function getArtist(opts: Opts, artist_id: string): Promise<ICFGData<ReturnType<typeof Parser.parseArtistContents>>>       { return await parseInitial(opts, `https://www.youtube.com/channel/${artist_id}`, Parser.parseArtistContents); }
-    export async function search(opts: Opts, search_query: string): Promise<ICFGData<ReturnType<typeof Parser.parseSearchContents>>>       { return await parseInitial(opts, `https://www.youtube.com/results?search_query=${encodeURIComponent(search_query).split("%20").join("+")}`, Parser.parseSearchContents); }
+    export async function search(opts: Opts, search_query: string): Promise<ICFGData<ReturnType<typeof Parser.parseSearchContents>>>       { return await parseInitial(opts, `https://www.youtube.com/results?search_query=${googleQuery(search_query)}`, Parser.parseSearchContents); }
+    export async function getYouTubeMix(opts: Opts, video_id: string): Promise<ICFGData<ReturnType<typeof Parser.parseMixContents>>>       { return await parseInitial(opts, `https://www.youtube.com/watch?v=${video_id}&start_radio=1&list=RD${video_id}`, Parser.parseMixContents); }
     export async function getLibrary(opts: Opts): Promise<ICFGData<ReturnType<typeof Parser.parseLibraryContents>>|ResponseError>          { return await parseInitial(opts, "https://www.youtube.com/feed/playlists", Parser.parseLibraryContents); }
     export async function getContinuation(opts: Opts, ytcfg: YTCFG, next_con: Continuation) {
         try {

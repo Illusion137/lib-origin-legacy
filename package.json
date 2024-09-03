@@ -19,8 +19,23 @@
   "homepage": "https://github.com/Illusion137/lib-origin#readme",
   "dependencies": {
     "@distube/ytdl-core": "^4.14.4",
+    "@react-native-community/cookies": "^5.0.1",
     "axios": "^1.6.8",
+    "expo-av": "^14.0.7",
+    "expo-file-system": "^17.0.1",
+    "expo-haptics": "^13.0.1",
+    "expo-sqlite": "^14.0.6",
     "fs": "^0.0.1-security",
-    "sha1-uint8array": "^0.10.7"
+    "react": "^18.3.1",
+    "react-native": "^0.75.2",
+    "react-native-document-picker": "^9.3.1",
+    "react-native-ffmpeg": "^0.5.2",
+    "react-native-track-player": "^4.1.1",
+    "sha1-uint8array": "^0.10.7",
+    "vm-browserify": "^1.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.1",
+    "@types/react": "^18.3.5"
   }
 }

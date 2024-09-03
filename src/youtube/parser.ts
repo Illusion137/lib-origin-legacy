@@ -3,6 +3,7 @@ import { ArtistResults_0, Content4, MusicCarouselShelfRenderer, MusicShelfRender
 import { ExploreResults_0 } from "./types/ExploreResults_0";
 import { HomeResults_0 } from "./types/HomeResults_0";
 import { LibraryResults_0, ParsedLibraryResults } from "./types/LibraryResults_0";
+import { MixResults_0 } from "./types/MixResults_0";
 import { PlaylistResults_0 } from "./types/PlaylistResults_0";
 import { PlaylistResults_1 } from "./types/PlaylistResults_1";
 import { SearchResults_0 } from "./types/SearchResults_0";
@@ -61,8 +62,14 @@ export function parseArtistContents(initial_data: InitialData[]){
 export function parseSearchContents(initial_data: InitialData){
     const contents: SearchResults_0 = initial_data as unknown as SearchResults_0;
     return {
-        "videos": contents.contents.sectionListRenderer.contents[0].itemSectionRenderer.contents.filter(item => item.videoWithContextRenderer !== undefined),
-        "artists": contents.contents.sectionListRenderer.contents[0].itemSectionRenderer.contents.filter(item => item.compactChannelRenderer !== undefined),
-        "playlists": contents.contents.sectionListRenderer.contents[0].itemSectionRenderer.contents.filter(item => item.compactPlaylistRenderer !== undefined),
+        "videos": contents.contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents[0].itemSectionRenderer.contents.filter(item => item.videoRenderer !== undefined).map(item => item.videoRenderer),
+        "artists": contents.contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents[0].itemSectionRenderer.contents.filter(item => item.channelRenderer !== undefined).map(item => item.channelRenderer),
+        "playlists": contents.contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents[0].itemSectionRenderer.contents.filter(item => item.radioRenderer !== undefined).map(item => item.radioRenderer),
+    }
+}
+export function parseMixContents(initial_data: InitialData){
+    const contents: MixResults_0 = initial_data as MixResults_0;
+    return {
+        "tracks": contents.contents.twoColumnWatchNextResults.playlist.playlist.contents.map(item => item.playlistPanelVideoRenderer)
     }
 }

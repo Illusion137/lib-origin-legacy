@@ -1,4 +1,5 @@
 import { Illusive } from './Illusive/src/illusive';
+import { Track } from './Illusive/src/types';
 import * as Origin from './index';
 import { SoundCloud } from './src/soundcloud/soundcloud';
 import { CookieJar } from './src/utils/cookie_util';
@@ -170,5 +171,7 @@ async function bar() {
     // const illusive = Illusive.music_service.get("Apple Music")?.get_playlist("library/playlist/p.7Pkeq4PcVPLK7Ae");
     // console.log(await Origin.AppleMusic.getAllPlaylistsFromAccount({"cookie_jar": apple_music_jar}));
     // console.log(await Origin.AppleMusic.getPlaylist("https://music.apple.com/us/playlist/r-bish/pl.u-d2b05g0TL356Jvz", {"cookie_jar": apple_music_jar}))
+    // const response = await Origin.YouTube.getYouTubeMix({}, "guWEo2Us5sE");
+    // console.log(await Origin.YouTube.search({}, 'lelo'));
 }
 bar();
