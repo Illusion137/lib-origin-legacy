@@ -89,3 +89,4 @@ export function time_to_timestamp(time_seconds: number): string{
     
     return String(time_min).padStart(2, '0') + ':' + String(time_sec).padStart(2, '0');
 }
+export function path_to_directory(path: string){ return path.split("/").slice(0,-1).join("/"); }

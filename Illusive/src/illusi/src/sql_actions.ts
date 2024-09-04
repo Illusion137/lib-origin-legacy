@@ -292,6 +292,9 @@ export async function all_playlists_names(): Promise<{"title": string}[]> {
     const playlists_names = await db.getAllAsync("SELECT title FROM playlists");
     return playlists_names as {"title": string}[];
 }
+export async function update_playlist(playlist_name: string, new_playlist: Playlist){
+    await db.runAsync(`UPDATE playlists ${obj_to_update_sql(new_playlist)} WHERE title = ?`, playlist_name);
+}
 export async function create_playlist(playlist_name: string): Promise<string> {
     if(playlist_name == 'backpack' || playlist_name == 'tracks' || playlist_name == 'recently_played_tracks' || playlist_name == 'playlists' || playlist_name == 'audiobooks')
         playlist_name += ' - Illusi';
